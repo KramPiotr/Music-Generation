@@ -10,7 +10,7 @@ def play(song):
 def save(song, name):
     song.write('midi', fp=f'output/MIDI/{name}')
 
-for file in glob.glob("MIREX_dataset/MIDIs/*.mid")[:10]:
+for file in glob.glob("datasets/MIREX_dataset/MIDIs/*.mid")[:10]:
     song = converter.parse(file)
     notes_to_parse = None
     parts = instrument.partitionByInstrument(song)

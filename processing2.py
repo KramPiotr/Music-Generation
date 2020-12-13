@@ -83,7 +83,7 @@ def print_parts_countour(midi):
 # Focusing only on 6 first measures to make it easier to understand.
 
 
-for file in glob.glob("MIREX_dataset/exampleMIDIs/*.mid")[:10]:
+for file in glob.glob("datasets/MIREX_dataset/exampleMIDIs/*.mid")[:10]:
     base_midi = open_midi(file, True)
     #base_midi.show("midi")
     #list_instruments(base_midi)

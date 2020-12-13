@@ -41,7 +41,7 @@ def extract_notes(midi_part):
 os.system('rmdir /S /Q output\pickle')
 os.system('mkdir output\pickle')
 
-for file in glob.glob("MIREX_dataset/exampleMIDIs/*.mid")[:10]:
+for file in glob.glob("datasets/MIREX_dataset/exampleMIDIs/*.mid")[:10]:
     base_midi = open_midi(file, True)
     #base_midi.show("midi")
     #list_instruments(base_midi)

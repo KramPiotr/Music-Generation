@@ -127,3 +127,10 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Music Generation Project
+
+datasets
+output
+run
+.idea

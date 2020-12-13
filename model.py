@@ -23,31 +23,33 @@ len_notes = 93
 #offsets are sometimes really big
 #change activation function to something custom
 #implement the attention from the book
-x = np.asarray(model_input).astype('float32')
-x = layers.LSTM(units, input_shape=(model_input.shape[1], model_input.shape[2]), return_sequences=True)(x[:100])
+x_input = layers.Input(shape=(10, 95))
+x = layers.LSTM(units, return_sequences=True)(x_input)
 x = layers.Dropout(drate)(x)
 x = layers.LSTM(units, return_sequences=True)(x)
 x = layers.Dropout(drate)(x)
-x = layers.LSTM(units, return_sequences=True)(x)
+x = layers.LSTM(units)(x)
 x = layers.Dense(units//2)(x)
 x = layers.Dropout(drate)(x)
 x_notes = layers.Dense(len_notes, activation="softmax")(x)
 x_rest = layers.Dense(2, activation="relu")(x)
 
-model = keras.Model(model_input[:100], [x_notes, x_rest], name="first LSTM RNN attempt")
+model = keras.Model(x_input, [x_notes, x_rest], name="first_LSTM_RNN_attempt")
 model.summary()
-# opti = tf.keras.optimizers.RMSprop(lr = 0.001)
-# model.compile(loss=['categorical_crossentropy', 'mean_squared_error'], optimizer=opti)
-#
-# # Load the weights to each node
-# # model.load_weights('weights.hdf5')
-#
-# filepath = "output/model/weights-improvement-{epoch:02d}-{loss:.4f}-bigger.hdf5"
-# checkpoint = tf.keras.callbacks.ModelCheckpoint(
-#     filepath, monitor='loss',
-#     verbose=0,
-#     save_best_only=True,
-#     mode='min'
-# )
-# callbacks_list = [checkpoint]
-# model.fit(model_input, network_output, epochs=200, batch_size=64, callbacks=callbacks_list)
+opti = tf.keras.optimizers.RMSprop(lr = 0.001)
+model.compile(loss=['categorical_crossentropy', 'mean_squared_error'], optimizer=opti)
+
+# Load the weights to each node
+# model.load_weights('weights.hdf5')
+
+filepath = "output/model/weights-improvement-{epoch:02d}-{loss:.4f}-bigger.hdf5"
+checkpoint = tf.keras.callbacks.ModelCheckpoint(
+    filepath, monitor='loss',
+    verbose=0,
+    save_best_only=True,
+    mode='min'
+)
+callbacks_list = [checkpoint]
+model_input = np.asarray(model_input).astype('float32')
+model_output = np.asarray(model_output).astype('float32')
+model.fit(model_input, [model_output[:, :93], model_output[:, 93:95]], epochs=200, callbacks=callbacks_list)# , batch_size=64)
