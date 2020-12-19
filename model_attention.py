@@ -1,12 +1,10 @@
 import os
 import pickle
-import numpy as np
-from music21 import note, chord, converter, instrument
+from music21 import note, chord, instrument
 import glob
 from RNN_attention import prepare_sequences, create_lookups, create_network, get_distinct
 from keras.callbacks import ModelCheckpoint, EarlyStopping
-from keras.utils import plot_model
-from midi_utils import open_midi
+from RNN_attention_multihot_encoding.utils import open_midi
 
 # run params
 section = 'MIREX'
