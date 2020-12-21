@@ -24,7 +24,7 @@ def create_network(n_notes, n_durations, seq_len = 32, embed_size=3, rnn_units=6
     if use_attention:
 
         x = LSTM(rnn_units, return_sequences=True)(x)
-        x = Dropout(0.5)(x)
+        x = Dropout(0.2)(x)
 
         e = Dense(1, activation='tanh')(x)
         e = Reshape([-1])(e)
