@@ -1,4 +1,4 @@
-from music21 import midi, instrument, chord, note
+from music21 import midi, instrument, chord, note, duration
 import numpy as np
 from keras.utils import np_utils
 
@@ -121,6 +121,29 @@ def multi_hot_encoding_with_octave(sequence):
         if chord[0] != -1:
             encoding[idx, chord - min_el] = 1
     return encoding
+
+def sample_with_temp(preds, temperature):
+    if temperature == 0:
+        return np.argmax(preds)
+    else:
+        preds = np.log(preds) / temperature
+        exp_preds = np.exp(preds)
+        preds = exp_preds / np.sum(exp_preds)
+        return np.random.choice(len(preds), p=preds)
+
+def get_note(multihot, dur, treshold=0.3):
+    if dur == 0:
+        return -1
+    dur = duration.Duration(dur)
+    if sum(multihot) == 0:
+        return note.Rest(duration=dur)
+    hots = [int(el) for el in np.where(multihot > treshold)[0]]
+    if len(hots) == 1:
+        return note.Note(hots[0], duration=dur)
+    return chord.Chord(hots, duration=dur)
+
+
+##TODO Question how to sample with temperature from multihot encoding, przygotuj inne pytania na spotkanie
 
 ## Zrob jakies unit tests, np czy durations z rests sie zgadzaja
 ## uporzadkuj code base

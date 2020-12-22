@@ -4,15 +4,18 @@ import os
 import numpy as np
 import sys
 from music21 import instrument, note, stream, chord, duration
-from models.RNNAttention import create_network, sample_with_temp
-
+from RNN_attention_multihot_encoding.model import create_network
+from RNN_attention_multihot_encoding.utils import sample_with_temp, get_note
 import matplotlib.pyplot as plt
 
 # run params
 model_kind = "MIREX_multihot"
 section = 'compose'
 run_id = '00'
-run_folder = f'run/{model_kind}/{section}/{run_id}'
+run_folder = f'../run/{model_kind}/{section}/{run_id}'
+output_folder = os.path.join(run_folder, 'output')
+if not os.path.exists(output_folder):
+    os.makedirs(output_folder, exist_ok=True)
 
 # model params
 seq_len = 32
@@ -33,7 +36,7 @@ with open(os.path.join(retrieve_folder, 'lookups'), 'rb') as f:
 
 #Build the model
 
-weights_folder = "../run/MIREX_multihot/05/weights"
+weights_folder = "../run/MIREX_multihot/10/weights"
 weights_file = 'weights.h5'
 
 model, att_model = create_network(n_notes, n_durations, seq_len=seq_len, embed_size=embed_size, rnn_units=rnn_units, use_attention=use_attention)
@@ -59,47 +62,37 @@ seq_len = 32
 # notes = ['START', 'F#3', 'G#3', 'F#3', 'E3', 'F#3', 'G#3', 'F#3', 'E3', 'F#3', 'G#3', 'F#3', 'E3','F#3', 'G#3', 'F#3', 'E3', 'F#3', 'G#3', 'F#3', 'E3', 'F#3', 'G#3', 'F#3', 'E3']
 # durations = [0, 0.75, 0.25, 1, 1, 1, 2, 0.75, 0.25, 1, 1, 1, 2, 0.75, 0.25, 1, 1, 1, 2, 0.75, 0.25, 1, 1, 1, 2]
 
-
-notes = ['START']
+# Customize the starting point
+notes = [np.zeros(12)]
 durations = [0]
 
 if seq_len is not None:
-    notes = ['START'] * (seq_len - len(notes)) + notes
+    notes = [np.zeros(12)] * (seq_len - len(notes)) + notes
     durations = [0] * (seq_len - len(durations)) + durations
-
 
 sequence_length = len(notes)
 
 #Generate notes
 
 prediction_output = []
-notes_input_sequence = []
-durations_input_sequence = []
+notes_input_sequence = notes
+durations_input_sequence = durations
 
 overall_preds = []
 
 for n, d in zip(notes, durations):
-    note_int = note_to_int[n]
-    duration_int = duration_to_int[d]
+    prediction_output.append(get_note(n, int_to_duration[d]))
+    if d != 0:
+        overall_preds.append(n)
 
-    notes_input_sequence.append(note_int)
-    durations_input_sequence.append(duration_int)
-
-    prediction_output.append([n, d])
-
-    if n != 'START':
-        midi_note = note.Note(n)
-
-        new_note = np.zeros(128)
-        new_note[midi_note.pitch.midi] = 1
-        overall_preds.append(new_note)
+#Attention matrix
 
 att_matrix = np.zeros(shape=(max_extra_notes + sequence_length, max_extra_notes))
 
 for note_index in range(max_extra_notes):
 
     prediction_input = [
-        np.array([notes_input_sequence])
+        np.array([notes_input_sequence]).astype('int')
         , np.array([durations_input_sequence])
     ]
 
@@ -109,29 +102,14 @@ for note_index in range(max_extra_notes):
         att_matrix[(note_index - len(att_prediction) + sequence_length):(note_index + sequence_length),
         note_index] = att_prediction
 
-    new_note = np.zeros(128)
+    overall_preds.append(notes_prediction[0])
 
-    for idx, n_i in enumerate(notes_prediction[0]):
-        try:
-            note_name = int_to_note[idx]
-            midi_note = note.Note(note_name)
-            new_note[midi_note.pitch.midi] = n_i
+    d = sample_with_temp(durations_prediction[0], duration_temp)
 
-        except:
-            pass
+    prediction_output.append(get_note(notes_prediction[0], int_to_duration[d]))
 
-    overall_preds.append(new_note)
-
-    i1 = sample_with_temp(notes_prediction[0], notes_temp)
-    i2 = sample_with_temp(durations_prediction[0], duration_temp)
-
-    note_result = int_to_note[i1]
-    duration_result = int_to_duration[i2]
-
-    prediction_output.append([note_result, duration_result])
-
-    notes_input_sequence.append(i1)
-    durations_input_sequence.append(i2)
+    notes_input_sequence.append((notes_prediction[0] > 0.5))
+    durations_input_sequence.append(d)
 
     if len(notes_input_sequence) > max_seq_len:
         notes_input_sequence = notes_input_sequence[1:]
@@ -140,84 +118,84 @@ for note_index in range(max_extra_notes):
     #     print(note_result)
     #     print(duration_result)
 
-    if note_result == 'START':
+    if d == 0:
         break
 
-overall_preds = np.transpose(np.array(overall_preds))
-print('Generated sequence of {} notes'.format(len(prediction_output)))
+prediction_output = [p for p in prediction_output if p != -1]
 
-fig, ax = plt.subplots(figsize=(15, 15))
-ax.set_yticks([int(j) for j in range(35, 70)])
-
-plt.imshow(overall_preds[35:70, :], origin="lower", cmap='coolwarm', vmin=-0.5, vmax=0.5,
-           extent=[0, max_extra_notes, 35, 70]
-
-           )
+# overall_preds = np.transpose(np.array(overall_preds))
+# print(f'Generated sequence of {len(prediction_output)} notes')
+#
+# fig, ax = plt.subplots(figsize=(15, 15))
+# ax.set_yticks([int(j) for j in range(35, 70)])
+#
+# plt.imshow(overall_preds[35:70, :], origin="lower", cmap='coolwarm', vmin=-0.5, vmax=0.5,
+#            extent=[0, max_extra_notes, 35, 70]
+#
+#            )
 
 #convert the output from the prediction to notes and create a midi file from the notes
 
-output_folder = os.path.join(run_folder, 'output')
 
 midi_stream = stream.Stream()
 
 # create note and chord objects based on the values generated by the model
-for pattern in prediction_output:
-    note_pattern, duration_pattern = pattern
-    # pattern is a chord
-    if ('.' in note_pattern):
-        notes_in_chord = note_pattern.split('.')
-        chord_notes = []
-        for current_note in notes_in_chord:
-            new_note = note.Note(current_note)
-            new_note.duration = duration.Duration(duration_pattern)
-            new_note.storedInstrument = instrument.Violoncello()
-            chord_notes.append(new_note)
-        new_chord = chord.Chord(chord_notes)
-        midi_stream.append(new_chord)
-    elif note_pattern == 'rest':
-    # pattern is a rest
-        new_note = note.Rest()
-        new_note.duration = duration.Duration(duration_pattern)
-        new_note.storedInstrument = instrument.Violoncello()
-        midi_stream.append(new_note)
-    elif note_pattern != 'START':
-    # pattern is a note
-        new_note = note.Note(note_pattern)
-        new_note.duration = duration.Duration(duration_pattern)
-        new_note.storedInstrument = instrument.Violoncello()
-        midi_stream.append(new_note)
+for note in prediction_output:
+    midi_stream.append(note)
 
+    # note_pattern, duration_pattern = pattern
+    # # pattern is a chord
+    # if ('.' in note_pattern):
+    #     notes_in_chord = note_pattern.split('.')
+    #     chord_notes = []
+    #     for current_note in notes_in_chord:
+    #         new_note = note.Note(current_note)
+    #         new_note.duration = duration.Duration(duration_pattern)
+    #         new_note.storedInstrument = instrument.Violoncello()
+    #         chord_notes.append(new_note)
+    #     new_chord = chord.Chord(chord_notes)
+    #     midi_stream.append(new_chord)
+    # elif note_pattern == 'rest':
+    # # pattern is a rest
+    #     new_note = note.Rest()
+    #     new_note.duration = duration.Duration(duration_pattern)
+    #     new_note.storedInstrument = instrument.Violoncello()
+    #     midi_stream.append(new_note)
+    # elif note_pattern != 'START':
+    # # pattern is a note
+    #     new_note = note.Note(note_pattern)
+    #     new_note.duration = duration.Duration(duration_pattern)
+    #     new_note.storedInstrument = instrument.Violoncello()
+    #     midi_stream.append(new_note)
 
-
-midi_stream = midi_stream.chordify()
 timestr = time.strftime("%Y%m%d-%H%M%S")
 midi_stream.write('midi', fp=os.path.join(output_folder, 'output-' + timestr + '.mid'))
 
-## attention plot
-if use_attention:
-    fig, ax = plt.subplots(figsize=(20, 20))
-
-    im = ax.imshow(att_matrix[(seq_len - 2):, ], cmap='coolwarm', interpolation='nearest')
-
-    # Minor ticks
-    ax.set_xticks(np.arange(-.5, len(prediction_output) - seq_len, 1), minor=True);
-    ax.set_yticks(np.arange(-.5, len(prediction_output) - seq_len, 1), minor=True);
-
-    # Gridlines based on minor ticks
-    ax.grid(which='minor', color='black', linestyle='-', linewidth=1)
-
-    # We want to show all ticks...
-    ax.set_xticks(np.arange(len(prediction_output) - seq_len))
-    ax.set_yticks(np.arange(len(prediction_output) - seq_len + 2))
-    # ... and label them with the respective list entries
-    ax.set_xticklabels([n[0] for n in prediction_output[(seq_len):]])
-    ax.set_yticklabels([n[0] for n in prediction_output[(seq_len - 2):]])
-
-    # ax.grid(color='black', linestyle='-', linewidth=1)
-
-    ax.xaxis.tick_top()
-
-    plt.setp(ax.get_xticklabels(), rotation=90, ha="left", va="center",
-             rotation_mode="anchor")
-
-    plt.show()
+# ## attention plot
+# if use_attention:
+#     fig, ax = plt.subplots(figsize=(20, 20))
+#
+#     im = ax.imshow(att_matrix[(seq_len - 2):, ], cmap='coolwarm', interpolation='nearest')
+#
+#     # Minor ticks
+#     ax.set_xticks(np.arange(-.5, len(prediction_output) - seq_len, 1), minor=True);
+#     ax.set_yticks(np.arange(-.5, len(prediction_output) - seq_len, 1), minor=True);
+#
+#     # Gridlines based on minor ticks
+#     ax.grid(which='minor', color='black', linestyle='-', linewidth=1)
+#
+#     # We want to show all ticks...
+#     ax.set_xticks(np.arange(len(prediction_output) - seq_len))
+#     ax.set_yticks(np.arange(len(prediction_output) - seq_len + 2))
+#     # ... and label them with the respective list entries
+#     ax.set_xticklabels([n[0] for n in prediction_output[(seq_len):]])
+#     ax.set_yticklabels([n[0] for n in prediction_output[(seq_len - 2):]])
+#
+#     # ax.grid(color='black', linestyle='-', linewidth=1)
+#
+#     ax.xaxis.tick_top()
+#
+#     plt.setp(ax.get_xticklabels(), rotation=90, ha="left", va="center",
+#              rotation_mode="anchor")
+#
+#     plt.show()
