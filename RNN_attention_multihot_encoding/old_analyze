@@ -1,0 +1,53 @@
+# analyze_frequencies_by_group("../output/plots/MIREX_dataset", suffix="_before_processing", n_labels=9)
+# plot_frequencies_by_pitch("../output/plots/MIREX_dataset", suffix="_before_processing")
+
+# remove_repetition()
+# analyze_frequencies_by_group("../output/plots/MIREX_dataset", suffix=suffix)
+# plot_frequencies_by_pitch("../output/plots/MIREX_dataset", suffix=suffix)
+
+
+
+# datasets = [
+#     "../run/MIREX_multihot/00/store/processed",
+#     "../processed_midi/MIDI_archive/overall"
+# ]
+#
+# save_dir = "../run/MIREX_multihot/two_datasets_store"
+#
+# merge_datasets(datasets, save_dir, 32)
+
+#create_processed(notes, durations)
+#separate_parts()
+#analyze_frequencies_by_duration("../output/plots/MIREX_dataset", suffix="_before_processing")
+# analyze if duration 0 is divisible by 32, get particular parts from it, analyze if some of these parts are weird
+
+# # removal by cutoff
+# remove_idx = []
+#
+# for i in range(len(network_input[0])):
+#     for j in range(32):
+#         if sum(network_input[0][i][j]) > 4:
+#             remove_idx.append(i)
+#             break
+#         if int_to_duration[network_input[1][i][j]] > 3:
+#             remove_idx.append(i)
+#             break
+#
+# for i in range(2):
+#     network_input[i] = np.delete(network_input[i], remove_idx, axis=0)
+#     network_output[i] = np.delete(network_output[i], remove_idx, axis=0)
+# #81387 removed with 4, 4
+# #150296 removed with 4, 3
+# #182172 removed with 3, 3
+# #232814 removed with 3, 2 (so about half)
+# #340264 removed with 3, 1
+
+
+# data_path = "../run/MIREX_multihot/two_datasets_store"
+# notes, durations = retrieve_notes_and_durations(data_path)
+#
+# vis_path = os.path.join(data_path, "visualizations")
+# os.makedirs(vis_path, exist_ok=True)
+# analyze_frequencies_by_group(notes, vis_path, n_labels=4)
+# plot_frequencies_by_pitch(notes, vis_path)
+# analyze_frequencies_by_duration(durations, vis_path)

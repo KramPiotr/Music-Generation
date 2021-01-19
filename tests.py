@@ -1,4 +1,4 @@
-from RNN_attention_multihot_encoding.utils import open_midi, extract_notes
+from utilities.utils import open_midi, extract_notes
 
 
 def extract_notes_test():

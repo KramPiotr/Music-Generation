@@ -134,3 +134,6 @@ datasets
 output
 run
 .idea
+processed_midi/
+RNN_attention/run_id
+trials.mid

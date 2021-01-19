@@ -1,22 +1,8 @@
-from music21 import midi, instrument, chord, note, duration
 import numpy as np
 from keras.utils import np_utils
-
-
-def open_midi(midi_path, remove_drums=True):
-    # There is an one-line method to read MIDIs
-    # but to remove the drums we need to manipulate some
-    # low level MIDI events.
-    # TODO check why it works
-    mf = midi.MidiFile()
-    mf.open(midi_path)
-    mf.read()
-    mf.close()
-    if (remove_drums):
-        for i in range(len(mf.tracks)):
-            mf.tracks[i].events = [ev for ev in mf.tracks[i].events if ev.channel != 10]
-    return midi.translate.midiFileToStream(mf)
-
+import os
+import pickle as pkl
+from utilities.notes_utils import multi_hot_encoding_12_tones
 
 def get_distinct(elements):
     # Get all pitch names
@@ -31,35 +17,6 @@ def create_lookups(element_names):
     int_to_element = dict((number, element) for number, element in enumerate(element_names))
 
     return (element_to_int, int_to_element)
-
-
-def extract_notes(score, seq_len):
-    parts = instrument.partitionByInstrument(score)
-
-    if parts:
-        parts_to_parse = filter(lambda part: len(part) > 3 * seq_len, [part.recurse() for part in parts.parts])
-    else:  # file has notes in a flat structure
-        parts_to_parse = [score.flat.notes]
-
-    notes = []
-    durations = []
-    for notes_to_parse in parts_to_parse:
-        notes.extend([[-1]] * seq_len)
-        durations.extend([0] * seq_len)
-
-        for element in notes_to_parse:
-            if isinstance(element, note.Note):
-                durations.append(element.duration.quarterLength)
-                if element.isRest:
-                    notes.append([-1])
-                else:
-                    notes.append([element.pitch.ps])
-
-            if isinstance(element, chord.Chord):
-                durations.append(element.duration.quarterLength)
-                notes.append(sorted([pitch.ps for pitch in element.pitches]))
-
-    return notes, durations
 
 
 def prepare_sequences(notes, durations, lookups, distincts, seq_len=32):
@@ -97,31 +54,6 @@ def prepare_sequences(notes, durations, lookups, distincts, seq_len=32):
 
     return network_input, network_output
 
-
-def multi_hot_encoding_12_tones(sequence):
-    encoding = np.zeros((len(sequence), 12))
-    for idx, chord in enumerate(sequence):
-        if chord[0] != -1:
-            hot = (np.array(chord) % 12).astype(int)
-            encoding[idx, hot] = 1
-    return encoding
-
-
-def multi_hot_encoding_with_octave(sequence):
-    min_el = 1e9
-    max_el = -1
-    for chord in sequence:
-        for pitch in chord:
-            if pitch != -1:
-                minPitch = min(pitch, minPitch)
-                maxPitch = max(pitch, maxPitch)
-
-    encoding = np.zeros((sequence.shape[0], max_el - min_el))
-    for idx, chord in enumerate(sequence):
-        if chord[0] != -1:
-            encoding[idx, chord - min_el] = 1
-    return encoding
-
 def sample_with_temp(preds, temperature):
     if temperature == 0:
         return np.argmax(preds)
@@ -131,17 +63,44 @@ def sample_with_temp(preds, temperature):
         preds = exp_preds / np.sum(exp_preds)
         return np.random.choice(len(preds), p=preds)
 
-def get_note(multihot, dur, treshold=0.3):
-    if dur == 0:
-        return -1
-    dur = duration.Duration(dur)
-    if sum(multihot) == 0:
-        return note.Rest(duration=dur)
-    hots = [int(el) for el in np.where(multihot > treshold)[0]]
-    if len(hots) == 1:
-        return note.Note(hots[0], duration=dur)
-    return chord.Chord(hots, duration=dur)
+def save_notes_and_durations(store_folder, notes, durations):
+    os.makedirs(store_folder, exist_ok=True)
+    with open(os.path.join(store_folder, 'notes'), 'wb') as f:
+        pkl.dump(notes, f)
+    with open(os.path.join(store_folder, 'durations'), 'wb') as f:
+        pkl.dump(durations, f)
 
+def retrieve_notes_and_durations(store_folder):
+    notes_path = os.path.join(store_folder, "notes")
+    dur_path = os.path.join(store_folder, "durations")
+    if not os.path.exists(notes_path) or not os.path.exists(dur_path):
+        return [], []
+    with open(notes_path, 'rb') as f:
+        notes = pkl.load(f)
+    with open(dur_path, 'rb') as f:
+        durations = pkl.load(f)
+    return notes, durations
+
+def retrieve_network_input_output(store_folder):
+    in_path = os.path.join(store_folder, "network_input")
+    out_path = os.path.join(store_folder, "network_output")
+    if not os.path.exists(in_path) or not os.path.exists(out_path):
+        raise Exception("Invalid path for the network input and output")
+    with open(in_path, 'rb') as f:
+        in_data = pkl.load(f)
+    with open(out_path, 'rb') as f:
+        out_data = pkl.load(f)
+    return in_data, out_data
+
+def color_list(kind, mod):
+    color_map = np.random.rand(mod, 3)
+    colors = [0]
+    for i in range(1, len(kind)):
+        if kind[i] == kind[i-1]:
+            colors.append(colors[-1])
+        else:
+            colors.append((colors[-1] + 1)%mod)
+    return [color_map[i] for i in colors]
 
 ##TODO Question how to sample with temperature from multihot encoding, przygotuj inne pytania na spotkanie
 

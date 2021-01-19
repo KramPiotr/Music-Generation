@@ -21,8 +21,6 @@ def create_lookups(element_names):
 
     return (element_to_int, int_to_element)
 
-
-
 def prepare_sequences(notes, durations, lookups, distincts, seq_len=32):
     """ Prepare the sequences used to train the Neural Network """
 

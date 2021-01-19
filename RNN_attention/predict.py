@@ -5,44 +5,40 @@ import numpy as np
 from music21 import stream
 import sys
 import collections
-from RNN_attention_multihot_encoding.model import create_network
+from RNN_attention.model import create_network
 from utilities.utils import sample_with_temp
 from utilities.midi_utils import get_note, get_initialized_song
-from utilities.notes_utils import multi_hot_encoding_12_tones
 
-def predict(init, duration_temp, weights_file = 'weights.h5', version_id='0'):
+def predict(init, notes_temp, duration_temp, weights_file = 'weights.h5', version_id='00'):
+    #init: 'cfge' #'ttls' #None
     # run params
-    model_kind = 'two_datasets_multihot' #"MIREX_multihot"
+    model_kind = 'two_datasets_attention' #"MIREX_multihot"
     section = 'compose'
     run_folder = f'../run/{model_kind}/{section}/{version_id}'
-    output_folder = os.path.join(run_folder, 'output')
-    if not os.path.exists(output_folder):
-        os.makedirs(output_folder, exist_ok=True)
 
     # model params
     seq_len = 32
-    embed_size = 3
+    embed_size = 100
     rnn_units = 256
     use_attention = True
     n_notes = 12
-    treshold = 0.2
 
     #Load the lookup tables
 
-    retrieve_folder = "../run/two_datasets_store"
+    retrieve_folder = "../run/two_datasets_attention/store"
 
     with open(os.path.join(retrieve_folder, 'distincts'), 'rb') as f:
-        duration_names, n_durations = pkl.load(f)
+        notes_names, n_notes, duration_names, n_durations = pkl.load(f)
 
     with open(os.path.join(retrieve_folder, 'lookups'), 'rb') as f:
-        duration_to_int, int_to_duration = pkl.load(f)
+        note_to_int, int_to_note, duration_to_int, int_to_duration = pkl.load(f)
 
     #Build the model
 
-    weights_folder = "../run/two_datasets_multihot/0/weights"
+    weights_folder = f"../run/two_datasets_attention/{version_id}/weights"
     #weights_file = 'weights.h5'
 
-    model, att_model = create_network(n_notes, n_durations, seq_len=seq_len, embed_size=embed_size, rnn_units=rnn_units, use_attention=use_attention)
+    model, att_model = create_network(n_notes, n_durations, embed_size=embed_size, rnn_units=rnn_units, use_attention=use_attention)
 
     # Load the weights to each node
     weight_source = os.path.join(weights_folder, weights_file)
@@ -66,28 +62,25 @@ def predict(init, duration_temp, weights_file = 'weights.h5', version_id='0'):
     # durations = [0, 0.75, 0.25, 1, 1, 1, 2, 0.75, 0.25, 1, 1, 1, 2, 0.75, 0.25, 1, 1, 1, 2, 0.75, 0.25, 1, 1, 1, 2]
 
     # Customize the starting point
-    notes, durations = get_initialized_song(init, False)
+    notes, durations = get_initialized_song(init, True)
 
     if seq_len is not None:
-        notes = [[-1]] * (seq_len - len(notes)) + notes
+        notes = ['S'] * (seq_len - len(notes)) + notes
         durations = [0] * (seq_len - len(durations)) + durations
-
-    notes = list(multi_hot_encoding_12_tones(notes))
-    durations = [duration_to_int[d] for d in durations]
 
     sequence_length = len(notes)
 
     #Generate notes
 
     prediction_output = []
-    notes_input_sequence = notes
-    durations_input_sequence = durations
+    notes_input_sequence = [note_to_int[n] for n in notes]
+    durations_input_sequence = [duration_to_int[d] for d in durations]
 
     overall_preds = []
 
     for n, d in zip(notes, durations):
-        prediction_output.append(get_note(n, d, False, treshold=treshold))
-        if d != 0:
+        if n != 'S':
+            prediction_output.append(get_note(n, d, True))
             overall_preds.append(n)
 
     #Attention matrix
@@ -100,7 +93,7 @@ def predict(init, duration_temp, weights_file = 'weights.h5', version_id='0'):
     for note_index in range(max_extra_notes):
 
         prediction_input = [
-            np.array([notes_input_sequence]).astype('int')
+              np.array([notes_input_sequence])
             , np.array([durations_input_sequence])
         ]
 
@@ -110,15 +103,21 @@ def predict(init, duration_temp, weights_file = 'weights.h5', version_id='0'):
             att_matrix[(note_index - len(att_prediction) + sequence_length):(note_index + sequence_length),
             note_index] = att_prediction
 
-        overall_preds.append(notes_prediction[0])
-
+        n = sample_with_temp(notes_prediction[0], notes_temp)
         d = sample_with_temp(durations_prediction[0], duration_temp)
 
-        prediction_output.append(get_note(notes_prediction[0], int_to_duration[d], False, treshold=treshold))
+        note = int_to_note[n]
+        duration = int_to_duration[d]
+
+        overall_preds.append(note)
+        if note != "S":
+            prediction_output.append(get_note(note, duration, str=True))
+            note_predictions.append(note)
+            duration_predictions.append(duration)
 
         # prepare for next loop iteration
 
-        notes_input_sequence.append((notes_prediction[0] > treshold))
+        notes_input_sequence.append(n)
         durations_input_sequence.append(d)
 
         if len(notes_input_sequence) > max_seq_len:
@@ -128,10 +127,8 @@ def predict(init, duration_temp, weights_file = 'weights.h5', version_id='0'):
         #     print(note_result)
         #     print(duration_result)
 
-        if d == 0:
+        if note == "S":
             break
-
-    prediction_output = [p for p in prediction_output if p != -1]
 
     # overall_preds = np.transpose(np.array(overall_preds))
     # print(f'Generated sequence of {len(prediction_output)} notes')
@@ -179,7 +176,58 @@ def predict(init, duration_temp, weights_file = 'weights.h5', version_id='0'):
         #     new_note.storedInstrument = instrument.Violoncello()
         #     midi_stream.append(new_note)
 
-    timestr = time.strftime("%Y%m%d-%H%M%S")
-    midi_stream.write('midi', fp=os.path.join(output_folder, 'output-' + timestr + f'_tresh_{treshold}_init_{init if init else "none"}.mid'))
+    timestr = time.strftime("%Y_%m_%d--%H_%M_%S")
+    output_folder = os.path.join(run_folder, f"output-{timestr}-{str(init)}-{notes_temp}-{duration_temp}-{weights_file}")
+    os.makedirs(output_folder, exist_ok=True)
+    midi_stream.write('midi', fp=os.path.join(output_folder, f'output_init_{init if init else "none"}.mid'))
+    with open(os.path.join(output_folder, f"analysis.txt"), "w") as f:
+        original_stdout = sys.stdout
+        sys.stdout = f
+        print(f"Length of the piece {len(note_predictions)}")
+        print(f"Initialization: {init if init else 'none'}")
+        print(f"Note temperature (0 is just argmax): {notes_temp}")
+        print(f"Duration temperature (0 is just argmax): {duration_temp}")
+        print(f"Version of the model: {version_id}")
+        print(f"Weight file: {weights_file}\n")
+        print("The piece\n")
+        for n, d in zip(note_predictions, duration_predictions):
+            print(('%-20s' % f"{n}") + f"{d}")
+        print("\nAnalysis\n")
+        print("Notes\n")
+        #note_predictions = np.array(note_predictions)
+        #duration_predictions = np.array(duration_predictions)
+        for n, occ in collections.Counter(note_predictions).most_common():
+            print(('%-20s' % f"{n}") + f"{occ}")
+        print("\nDurations\n")
+        for d, occ in collections.Counter(duration_predictions).most_common():
+            print(('%-20s' % f"{d}") + f"{occ}")
+        sys.stdout = original_stdout
 
-predict("cfge", 1, weights_file = 'weights-improvement-01-6.2628.h5', version_id='0')
+    # ## attention plot
+    # if use_attention:
+    #     fig, ax = plt.subplots(figsize=(20, 20))
+    #
+    #     im = ax.imshow(att_matrix[(seq_len - 2):, ], cmap='coolwarm', interpolation='nearest')
+    #
+    #     # Minor ticks
+    #     ax.set_xticks(np.arange(-.5, len(prediction_output) - seq_len, 1), minor=True);
+    #     ax.set_yticks(np.arange(-.5, len(prediction_output) - seq_len, 1), minor=True);
+    #
+    #     # Gridlines based on minor ticks
+    #     ax.grid(which='minor', color='black', linestyle='-', linewidth=1)
+    #
+    #     # We want to show all ticks...
+    #     ax.set_xticks(np.arange(len(prediction_output) - seq_len))
+    #     ax.set_yticks(np.arange(len(prediction_output) - seq_len + 2))
+    #     # ... and label them with the respective list entries
+    #     ax.set_xticklabels([n[0] for n in prediction_output[(seq_len):]])
+    #     ax.set_yticklabels([n[0] for n in prediction_output[(seq_len - 2):]])
+    #
+    #     # ax.grid(color='black', linestyle='-', linewidth=1)
+    #
+    #     ax.xaxis.tick_top()
+    #
+    #     plt.setp(ax.get_xticklabels(), rotation=90, ha="left", va="center",
+    #              rotation_mode="anchor")
+    #
+    #     plt.show()

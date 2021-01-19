@@ -2,43 +2,30 @@ import os
 import pickle as pkl
 import tensorflow as tf
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, CSVLogger
-from RNN_attention_multihot_encoding.model import create_network
+from RNN_attention.model import create_network
 from utilities.midi_utils import process_midi
+from utilities.run_utils import set_run_id
+from utilities.utils import get_distinct, retrieve_notes_and_durations, retrieve_network_input_output
+from RNN_attention.model_specific_utils import create_store
 
-force_run_id = '0' #None
+force_run_id = 'reset' #None #Integer #'reset' #'resetX'
 next_run = True
-n_if_shortened = None #100 #None
+n_if_shortened = None #None #100 #None
 epochs = 100 #1
 
 # data params
 seq_len = 32
-embed_size = 3
+embed_size = 100
 rnn_units = 256
 use_attention = True
-n_notes = 12
 
-
-if not force_run_id:
-    run_id_file = "run_id"
-    with open(run_id_file, 'rb') as f:
-        run_id = pkl.load(f)
-    if next_run:
-        run_id += 1
-    with open(run_id_file, 'wb') as f:
-        pkl.dump(run_id, f)
-    if run_id < 10:
-        run_id = '0' + str(run_id)
-    else:
-        run_id = str(run_id)
-else:
-    run_id = force_run_id
-
+run_id = set_run_id(os.getcwd(), force_run_id, next_run)
 
 # run params
-section = 'two_datasets_multihot'
+section = 'two_datasets_attention'
 
-run_folder = os.path.join("../run", section)
-run_folder = os.path.join(run_folder, run_id)
+section_folder = os.path.join("../run", section)
+run_folder = os.path.join(section_folder, run_id)
 
 store_folder = os.path.join(run_folder, 'store')
 
@@ -47,33 +34,23 @@ if not os.path.exists(run_folder):
     os.mkdir(os.path.join(run_folder, 'output'))
     os.mkdir(os.path.join(run_folder, 'weights'))
 
-mode = 'load' # 'build'  # 'load' #
+mode = 'build' # 'build'  # 'load' #
 
+store_model_folder = os.path.join(section_folder, "store")
 if mode == 'build':
-    process_midi("../datasets/MIREX_dataset/MIDIs", seq_len, store_folder)
-else:
-    # with open(os.path.join(store_folder, 'notes'), 'rb') as f:
-    #     notes = pickle.load(f)
-    retrieve_folder = "../run/two_datasets_store"
+    create_store("../run/two_datasets_store", store_model_folder, seq_len)
 
-    with open(os.path.join(retrieve_folder, 'durations'), 'rb') as f:
-        durations = pkl.load(f)
+with open(os.path.join(store_model_folder, "distincts"), 'rb') as f:
+    [_, n_notes, _, n_durations] = pkl.load(f)
 
-    with open(os.path.join(retrieve_folder, 'distincts'), 'rb') as f:
-        duration_names, n_durations = pkl.load(f)
-
-    with open(os.path.join(retrieve_folder, 'network_input'), 'rb') as f:
-        network_input = pkl.load(f)
-
-    with open(os.path.join(retrieve_folder, 'network_output'), 'rb') as f:
-        network_output = pkl.load(f)
+network_input, network_output = retrieve_network_input_output(store_model_folder)
 
 if n_if_shortened:
     for i in range(2):
         network_input[i] = network_input[i][:n_if_shortened]
         network_output[i] = network_output[i][:n_if_shortened]
 
-model, att_model = create_network(n_notes, n_durations, seq_len=seq_len, embed_size=embed_size, rnn_units=rnn_units, use_attention=use_attention)
+model, att_model = create_network(n_notes, n_durations, embed_size=embed_size, rnn_units=rnn_units, use_attention=use_attention)
 model.summary()
 with open(os.path.join(run_folder, "model.txt"),'w') as f:
     model.summary(print_fn=lambda x: f.write(x + '\n'))
@@ -120,15 +97,3 @@ history_callback = model.fit(network_input, network_output
           , callbacks=callbacks_list
           , shuffle=True
          )
-
-# loss_history = history_callback.history["val_pitch_loss"]
-# numpy_loss_history = np.array(loss_history)
-# np.savetxt("val_pitch_loss_history.txt", numpy_loss_history, delimiter=",")
-#TODO
-#train on only a few samples and test
-#analyze the notes and durations data
-#build simple classifiers
-#understand what happens with the attention
-#hype yourself - its machine learning!
-#train the same stuff on Google Colab and compare speed
-#standarize your code (format + pickle as pkl)

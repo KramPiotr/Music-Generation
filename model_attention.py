@@ -4,7 +4,7 @@ from music21 import note, chord, instrument
 import glob
 from RNN_attention import prepare_sequences, create_lookups, create_network, get_distinct
 from keras.callbacks import ModelCheckpoint, EarlyStopping
-from RNN_attention_multihot_encoding.utils import open_midi
+from utilities.utils import open_midi
 
 # run params
 section = 'MIREX'
