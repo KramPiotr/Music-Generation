@@ -8,9 +8,10 @@ from tqdm import tqdm
 seq_len = 32
 
 dataset = Path("../datasets/130000_Pop_Rock_Classical_Videogame_EDM_MIDI_Archive")
-store_dir = Path("../processed_midi/MIDI_archive")
+store_dir = Path("../processed_midi/MIDI_archive_part_preprocess")
+os.makedirs(store_dir, exist_ok=True)
 
-def parse_dataset(dataset, store_dir, seq_len, raw): #TODO extract also notes without preprocessing
+def parse_dataset(dataset, store_dir, seq_len, raw=False): #TODO extract also notes without preprocessing
     dataset_dirs = os.listdir(dataset)
     n_exceptions = 0
     error_dir = -1
@@ -48,6 +49,6 @@ def merge_data():
     process_notes_and_durations(notes, durations, seq_len, store)
     process_notes_and_durations(raw_notes, raw_durations, seq_len, raw_store)
 
-#parse_dataset(dataset, store_dir, seq_len, True)
-merge_data()
+parse_dataset(dataset, store_dir, seq_len)
+#merge_data()
 

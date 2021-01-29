@@ -1,9 +1,10 @@
 import numpy as np
-from music21 import midi, instrument, chord, note, duration, pitch
+from music21 import midi, instrument, chord, note, duration, pitch, stream
 import os
 import pickle as pkl
 import glob
 from utilities.part_utils import single_part_preprocess, process_notes_and_durations
+from utilities.utils import save_notes_and_durations
 
 def open_midi(midi_path, remove_drums=True):
     # There is an one-line method to read MIDIs
@@ -19,7 +20,7 @@ def open_midi(midi_path, remove_drums=True):
             mf.tracks[i].events = [ev for ev in mf.tracks[i].events if ev.channel != 10]
     return midi.translate.midiFileToStream(mf)
 
-def extract_notes(score, seq_len):
+def extract_notes(score, seq_len, with_start=True, raw=False):
     parts = instrument.partitionByInstrument(score)
 
     if parts:
@@ -30,24 +31,38 @@ def extract_notes(score, seq_len):
     notes = []
     durations = []
     for notes_to_parse in parts_to_parse:
-        notes.extend([[-1]] * seq_len)
-        durations.extend([0] * seq_len)
+        part_notes = []
+        part_durations = []
+        if with_start:
+            part_notes.extend([[-1]] * seq_len)
+            part_durations.extend([0] * seq_len)
 
         for element in notes_to_parse:
             if isinstance(element, note.Note):
-                durations.append(element.duration.quarterLength)
+                part_durations.append(element.duration.quarterLength)
                 if element.isRest:
-                    notes.append([-1])
+                    part_notes.append([-1])
                 else:
-                    notes.append([element.pitch.ps])
+                    part_notes.append([element.pitch.ps])
 
             if isinstance(element, chord.Chord):
                 durations.append(element.duration.quarterLength)
-                notes.append(sorted([pitch.ps for pitch in element.pitches]))
+                part_notes.append(sorted([pitch.ps for pitch in element.pitches]))
+        if not raw:
+            part_notes, part_durations = single_part_preprocess(part_notes, part_durations)
+        notes.extend(part_notes)
+        durations.extend(part_durations)
 
     return notes, durations
 
 def get_note(note_repr, dur_repr,  str=False, treshold=0.5):
+    '''
+    :param note_repr:
+    :param dur_repr:
+    :param str:
+    :param treshold: not only describes treshold for multihot note but also indicates that we want to use multihot instead of list representation
+    :return:
+    '''
     dur = duration.Duration(dur_repr)
     if str:
         if note_repr == "S":
@@ -60,13 +75,20 @@ def get_note(note_repr, dur_repr,  str=False, treshold=0.5):
         else:
             return chord.Chord(pitches, duration=dur)
     else:
-        bin_multihot = np.where(note_repr > treshold)[0]
-        if sum(bin_multihot) == 0:
-            return note.Rest(duration=dur)
-        hots = [int(el) for el in bin_multihot]
+        if treshold:
+            bin_multihot = np.where(note_repr > treshold)[0]
+            if sum(bin_multihot) == 0:
+                return note.Rest(duration=dur)
+            hots = [int(el) for el in bin_multihot]
+        else:
+            hots = note_repr
+            if hots[0] == -1:
+                return note.Rest(duration=dur)
         if len(hots) == 1:
             return note.Note(hots[0], duration=dur)
         return chord.Chord(hots, duration=dur)
+
+
 
 
 def process_midi(dataset, seq_len, store_folder, raw = False, whole_dataset = False):
@@ -82,19 +104,16 @@ def process_midi(dataset, seq_len, store_folder, raw = False, whole_dataset = Fa
         print(i + 1, "Parsing %s" % file)
         try:
             original_score = open_midi(file)
-            n, d = extract_notes(original_score, seq_len)
-            if not raw:
-                n, d = single_part_preprocess(n, d)
+            n, d = extract_notes(original_score, seq_len, raw=raw)
+            # if not raw:
+            #     n, d = single_part_preprocess(n, d) #if you have too little data then change that because so far its a song preprocessing
             notes.extend(n)
             durations.extend(d)
         except Exception:
             n_exceptions += 1
 
     if len(notes) != 0:
-        with open(os.path.join(store_folder, 'notes'), 'wb') as f:
-            pkl.dump(notes, f)
-        with open(os.path.join(store_folder, 'durations'), 'wb') as f:
-            pkl.dump(durations, f)
+        save_notes_and_durations(store_folder, notes, durations)
 
     if whole_dataset:
         process_notes_and_durations(notes, durations, store_folder)
@@ -105,13 +124,16 @@ def process_midi(dataset, seq_len, store_folder, raw = False, whole_dataset = Fa
 def translate_chord(pitches, separator = " "):
     return separator.join([pitch.Pitch(p).nameWithOctave for p in pitches])
 
+def translate_chord_string(str_):
+    return list(map(lambda x: -1 if x == "R" or x == "S" else int(note.Note(x).pitch.ps) % 12, str_.split(".")))
+
 def get_initialized_song(init=None, str=False):
     if init:
         if init == 'ttls':
-            notes = [[1], [1], [8], [8], [10], [10], [8]]
+            notes = [[0], [0], [7], [7], [9], [9], [7]]
             durations = [0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.5]
         elif init == 'cfge':
-            notes = [[1], [6], [8], [5]]
+            notes = [[0], [5], [7], [4]]
             durations = [0.25, 0.25, 0.25, 0.75]
         else:
             raise Exception("Ivalid initialization")
@@ -122,3 +144,25 @@ def get_initialized_song(init=None, str=False):
     if str:
         notes = [translate_chord(n, ".") for n in notes]
     return notes, durations
+
+def save_song_from_notes_and_durations(notes, durations, type="list", path="song.midi"):
+    if type == "str":
+        translate_function = lambda x, y: get_note(x, y, True)
+    elif type == "multihot":
+        translate_function = lambda x, y: get_note(x, y, False)
+    elif type == "list":
+        translate_function = lambda x, y: get_note(x, y, False, None)
+    else:
+        raise Exception("Invalid type")
+
+    midi_stream = stream.Stream()
+    for n, d in zip(notes, durations):
+        midi_stream.append(translate_function(n, d))
+
+    midi_stream.write('midi', fp=path)
+
+if __name__ == "__main__":
+    a = translate_chord_string("S")
+    b = translate_chord_string("R")
+    c = translate_chord_string("C.D")
+    g = 4

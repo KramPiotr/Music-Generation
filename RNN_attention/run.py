@@ -5,7 +5,7 @@ from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, CSVLogger
 from RNN_attention.model import create_network
 from utilities.midi_utils import process_midi
 from utilities.run_utils import set_run_id
-from utilities.utils import get_distinct, retrieve_notes_and_durations, retrieve_network_input_output
+from utilities.utils import get_distinct, retrieve_notes_and_durations, retrieve_network_input_output, print_to_file
 from RNN_attention.model_specific_utils import create_store
 
 force_run_id = 'reset' #None #Integer #'reset' #'resetX'
@@ -43,7 +43,8 @@ if mode == 'build':
 with open(os.path.join(store_model_folder, "distincts"), 'rb') as f:
     [_, n_notes, _, n_durations] = pkl.load(f)
 
-network_input, network_output = retrieve_network_input_output(store_model_folder)
+train_folder = os.path.join(store_model_folder, "train")
+network_input, network_output = retrieve_network_input_output(train_folder)
 
 if n_if_shortened:
     for i in range(2):
@@ -97,3 +98,16 @@ history_callback = model.fit(network_input, network_output
           , callbacks=callbacks_list
           , shuffle=True
          )
+
+
+
+test_folder = os.path.join(store_model_folder, "test")
+test_input, test_output = retrieve_network_input_output(test_folder)
+
+with open(os.path.join(run_folder, f"test_results.txt"), "w") as f:
+    print_to_file(f"Evaluation using a test set containing {len(test_input[0])} sequences", f)
+    results = model.evaluate(test_input, test_output, batch_size=32)
+    for n, r in zip(model.metrics_names, results):
+        print_to_file(f"{n:>13}: {r:.4f}", f)
+
+#TODO test the model and save to the file, maybe connect to 'predict' as well

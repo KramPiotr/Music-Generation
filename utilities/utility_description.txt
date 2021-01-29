@@ -1,0 +1,60 @@
+analyze.py
+  basic_analysis
+  plot_frequencies_by_pitch
+  analyze_frequencies_by_group
+  analyze_frequencies_by_duration
+  create_processed
+
+midi_utils.py
+  open_midi
+  extract_notes
+  get_note
+  process_midi
+  translate_chord
+  translate_chord_string
+  get_initialized_song
+  save_song_from_notes_and_durations
+
+notes_utils.py
+  remove_repetition
+  only_chroma
+  notes_to_int_tuples
+  multi_hot_encoding_12_tones
+  multi_hot_encoding_with_octave
+
+part_utils.py
+  separate_parts
+  preprocess
+  single_part_preprocess
+  process_notes_and_durations
+  merge_datasets
+
+plagiarism_detection.py
+  IoU
+  local_alignment
+  save_fragment
+  process_plagiarism
+  put_into_dirs
+  remove_error_output
+  process_plagiarism_for_database
+  saveIoU
+
+print_functions.py
+  top_level_functions
+  parse_ast
+
+run_utils.py
+  id_to_str
+  set_run_id
+
+utils.py
+  get_distinct
+  create_lookups
+  prepare_sequences
+  sample_with_temp
+  save_notes_and_durations
+  retrieve_distincts_and_lookups
+  retrieve_notes_and_durations
+  retrieve_network_input_output
+  color_list
+

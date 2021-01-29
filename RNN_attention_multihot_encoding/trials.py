@@ -10,6 +10,7 @@
 # with open(run_id_file, 'wb') as f:
 #     pkl.dump(run_id, f)
 
+
 # from music21 import stream, note, duration
 #
 # midi_stream = stream.Stream()
@@ -25,8 +26,11 @@
 #
 # midi_stream.write('midi', fp='trials.mid')
 
+
 # from RNN_attention_multihot_encoding.midi_utils import open_midi
 # open_midi("..\\datasets\\130000_Pop_Rock_Classical_Videogame_EDM_MIDI_Archive\\1\\10000yr.mid")
 
+
 # from utilities.midi_utils import translate_chord
 # print(translate_chord([2, 3, 4, 5, 6, 6, 1], separator="."))
+

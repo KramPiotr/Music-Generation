@@ -2,9 +2,10 @@ import numpy as np
 from keras.utils import np_utils
 import os
 import pickle as pkl
-from utilities.utils import retrieve_notes_and_durations, save_notes_and_durations, get_distinct, create_lookups
+from utilities.utils import retrieve_notes_and_durations, save_notes_and_durations, get_distinct, create_lookups, save_train_test_split, retrieve_network_input_output, print_to_file
 from utilities.midi_utils import translate_chord
 from utilities.notes_utils import multi_hot_encoding_12_tones
+from RNN_attention.model import create_network
 
 def create_store(retrieve_folder, store_folder, seq_len=32):
     notes, durations = retrieve_notes_and_durations(retrieve_folder)
@@ -19,6 +20,8 @@ def create_store(retrieve_folder, store_folder, seq_len=32):
 
     save_notes_and_durations(store_folder, str_notes, durations)
     process_notes_and_durations(str_notes, durations, store_folder, seq_len)
+    save_train_test_split(store_folder)
+
 
 def process_notes_and_durations(notes, durations, store_folder, seq_len):
 
@@ -81,3 +84,32 @@ def prepare_sequences(notes, durations, lookups, distincts, seq_len=32):
     network_output = [notes_network_output, durations_network_output]
 
     return network_input, network_output
+
+def predict(version='00', weights_file="weights.h5", embed_size=100, rnn_units=256, use_attention=True):
+    store_model_folder = "../run/two_datasets_attention/store"
+    run_folder = f"../run/two_datasets_attention/{version}"
+
+    test_folder = os.path.join(store_model_folder, "test")
+    test_input, test_output = retrieve_network_input_output(test_folder)
+
+    with open(os.path.join(store_model_folder, "distincts"), 'rb') as f:
+        [_, n_notes, _, n_durations] = pkl.load(f)
+
+    model, _ = create_network(n_notes, n_durations, embed_size=embed_size, rnn_units=rnn_units,
+                                      use_attention=use_attention)
+    if weights_file:
+        weights_source = f"../run/two_datasets_attention/00/weights/{weights_file}"
+        model.load_weights(weights_source)
+
+    # for i in range(2):
+    #     test_input[i] = test_input[i][:100]
+    #     test_output[i] = test_output[i][:100]
+
+    with open(os.path.join(run_folder, f"test_results_{weights_file}.txt"), "w") as f:
+        print_to_file(f"Evaluation using a test set containing {len(test_input[0])} sequences", f)
+        results = model.evaluate(test_input, test_output, batch_size=32)
+        for n, r in zip(model.metrics_names, results):
+            print_to_file(f"{n:>13}: {r:.4f}", f)
+
+if __name__ == "__main__":
+    predict('00', None)
