@@ -20,7 +20,6 @@ def create_store(retrieve_folder, store_folder, seq_len=32):
 
     save_notes_and_durations(store_folder, str_notes, durations)
     process_notes_and_durations(str_notes, durations, store_folder, seq_len)
-    save_train_test_split(store_folder)
 
 
 def process_notes_and_durations(notes, durations, store_folder, seq_len):
@@ -42,13 +41,7 @@ def process_notes_and_durations(notes, durations, store_folder, seq_len):
         pkl.dump(lookups, f)
 
     network_input, network_output = prepare_sequences(notes, durations, lookups, distincts, seq_len)
-
-    with open(os.path.join(store_folder, 'network_input'), 'wb') as f:
-        pkl.dump(network_input, f)
-
-    with open(os.path.join(store_folder, 'network_output'), 'wb') as f:
-        pkl.dump(network_output, f)
-
+    save_train_test_split(store_folder, (network_input, network_output))
 
 
 def prepare_sequences(notes, durations, lookups, distincts, seq_len=32):
@@ -112,4 +105,4 @@ def predict(version='00', weights_file="weights.h5", embed_size=100, rnn_units=2
             print_to_file(f"{n:>13}: {r:.4f}", f)
 
 if __name__ == "__main__":
-    predict('00', None)
+    create_store("../run/two_datasets_store/version_1", "../run/two_datasets_attention/store/version_1")

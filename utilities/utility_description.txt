@@ -43,6 +43,13 @@ print_functions.py
   top_level_functions
   parse_ast
 
+process_midi_archive.py
+  parse_dataset
+  merge_data
+
+run.py
+  run
+
 run_utils.py
   id_to_str
   set_run_id
@@ -57,4 +64,10 @@ utils.py
   retrieve_notes_and_durations
   retrieve_network_input_output
   color_list
+  extract_name_from_python_file
+  normalize_array
+  dump
+  save_train_test_split
+  print_to_file
+  truncate_str
 

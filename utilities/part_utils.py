@@ -1,6 +1,6 @@
 import os
 import pickle as pkl
-from utilities.utils import create_lookups, get_distinct, prepare_sequences, retrieve_notes_and_durations, save_notes_and_durations
+from utilities.utils import create_lookups, get_distinct, prepare_sequences, retrieve_notes_and_durations, save_notes_and_durations, save_train_test_split
 from utilities.notes_utils import only_chroma
 
 def separate_parts(notes, durations):
@@ -94,3 +94,16 @@ def merge_datasets(data_dirs, store_dir, seq_len):
         durations.extend(d)
     save_notes_and_durations(store_dir, notes, durations)
     process_notes_and_durations(notes, durations, seq_len, store_dir)
+    save_train_test_split(store_dir)
+
+if __name__ == "__main__":
+    datasets = [
+        "../run/MIREX_multihot/00/store/processed",
+        "../processed_midi/MIDI_archive_part_preprocess/overall"
+    ]
+
+    save_dir = "../run/two_datasets_store/version_"
+
+    #merge_datasets(datasets, save_dir, 32)
+    for no in ("1", "0"):
+        save_train_test_split(save_dir+no)

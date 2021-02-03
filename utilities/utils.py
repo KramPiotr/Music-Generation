@@ -1,10 +1,13 @@
 import numpy as np
 from keras.utils import np_utils
+from tensorflow.keras.models import model_from_json, Model
 import os
 import pickle as pkl
 from utilities.notes_utils import multi_hot_encoding_12_tones
 import ntpath
 import sys
+import re
+from glob import glob
 
 def get_distinct(elements):
     # Get all pitch names
@@ -67,43 +70,32 @@ def sample_with_temp(preds, temperature):
 
 def save_notes_and_durations(store_folder, notes, durations):
     os.makedirs(store_folder, exist_ok=True)
+    print(f"Saving notes and duration sequences of length {len(notes)} to {truncate_str(store_folder, 'prefix', 20)}")
     with open(os.path.join(store_folder, 'notes'), 'wb') as f:
         pkl.dump(notes, f)
     with open(os.path.join(store_folder, 'durations'), 'wb') as f:
         pkl.dump(durations, f)
 
+def retrieve(store_folder, name):
+    path_ = os.path.join(store_folder, name)
+    if not os.path.exists(path_):
+        raise Exception(f"Invalid path {store_folder} for the {name} object")
+    with open(path_, 'rb') as f:
+        object_ = pkl.load(f)
+    return object_
+
 def retrieve_distincts_and_lookups(store_folder):
-    distincts_path = os.path.join(store_folder, "distincts")
-    lookups_path = os.path.join(store_folder, "lookups")
-    if not os.path.exists(distincts_path) or not os.path.exists(lookups_path):
-        raise Exception("Invalid path for the distincts and lookups")
-    with open(distincts_path, 'rb') as f:
-        distincts = pkl.load(f)
-    with open(lookups_path, 'rb') as f:
-        lookups = pkl.load(f)
-    return distincts, lookups
+    return retrieve(store_folder, "distincts"), retrieve(store_folder, "lookups")
 
 def retrieve_notes_and_durations(store_folder):
-    notes_path = os.path.join(store_folder, "notes")
-    dur_path = os.path.join(store_folder, "durations")
-    if not os.path.exists(notes_path) or not os.path.exists(dur_path):
-        return [], []
-    with open(notes_path, 'rb') as f:
-        notes = pkl.load(f)
-    with open(dur_path, 'rb') as f:
-        durations = pkl.load(f)
-    return notes, durations
+    return retrieve(store_folder, "notes"), retrieve(store_folder, "durations")
 
-def retrieve_network_input_output(store_folder):
-    in_path = os.path.join(store_folder, "network_input")
-    out_path = os.path.join(store_folder, "network_output")
-    if not os.path.exists(in_path) or not os.path.exists(out_path):
-        raise Exception("Invalid path for the network input and output")
-    with open(in_path, 'rb') as f:
-        in_data = pkl.load(f)
-    with open(out_path, 'rb') as f:
-        out_data = pkl.load(f)
-    return in_data, out_data
+def retrieve_network_input_output(store_folder, n_if_shortened=None):
+    in_, out_ = retrieve(store_folder, "network_input"), retrieve(store_folder, "network_output")
+    if n_if_shortened is not None:
+        in_ = [x[:n_if_shortened] for x in in_]
+        out_ = [x[:n_if_shortened] for x in out_]
+    return (in_, out_)
 
 def color_list(kind, mod):
     color_map = np.random.rand(mod, 3)
@@ -128,8 +120,8 @@ def dump(dir, name, file):
     with open(os.path.join(dir, name), "wb") as f:
         pkl.dump(file, f)
 
-def save_train_test_split(store_folder):
-    in_, out_ = retrieve_network_input_output(store_folder)
+def save_train_test_split(store_folder, io_files=None):
+    in_, out_ = retrieve_network_input_output(store_folder) if not io_files else io_files
     dataset_len = len(in_[0])
     trainable = np.ones(dataset_len)
     trainable[:int(0.2*dataset_len)] = 0
@@ -145,10 +137,49 @@ def save_train_test_split(store_folder):
         name = "network_"+suffix
         dump(train_dir, name, train_data)
         dump(test_dir, name, test_data)
+    if not io_files:
+        os.remove(os.path.join(store_folder, "network_input"))
+        os.remove(os.path.join(store_folder, "network_output"))
 
-def print_to_file(str_, file):
+def print_to_file(str_, file, indent_level = 0):
+    str_ = " " * indent_level * 4 + str_
     print(str_, file=file)
     print(str_)
+
+def truncate_str(str_, where = "suffix", how_much = 10):
+    if len(str_) < how_much + 4:
+        return str_
+    if where == "suffix":
+        return re.sub(r'^(.{'+str(how_much)+r'}).*$', '\g<1>...', str_)
+    elif where == "prefix":
+        return re.sub(r'^.*(.{' + str(how_much) + r'})$', '...\g<1>', str_)
+    elif where == "middle":
+        pref_len = how_much//2
+        suf_len = how_much - pref_len
+        return re.sub(r'^(.{' + str(pref_len) + r'}).*(.{' + str(suf_len) + r'})$', '\g<1>...\g<2>', str_)
+    else:
+        raise ValueError("Invalid value of the 'where' parameter")
+
+def save_model_to_json(model, dir, name="model"):
+    with open(os.path.join(dir, name+".json"), "w") as f:
+        f.write(model.to_json())
+
+def retrieve_model_from_json(dir, name="model"):
+    with open(os.path.join(dir, name+".json"), "r") as f:
+        return model_from_json(f.read())
+
+def retrieve_attention_model(model):
+    try:
+        return Model(inputs=model.inputs, outputs=[model.get_layer("activation").output])
+    except ValueError:
+        print("The model has no 'attention' layer. Returning None in retrieve_attention_model")
+        return None
+
+def retrieve_best_model(dir):
+    model = retrieve_model_from_json(dir)
+    weights_file = glob(os.path.join(os.path.join(dir, "weights"), "weights-improvement*"))[-1]
+    model.load_weights(weights_file)
+    return retrieve_attention_model(model), model
 
 ##TODO Question how to sample with temperature from multihot encoding, przygotuj inne pytania na spotkanie
 
@@ -156,4 +187,5 @@ def print_to_file(str_, file):
 ## uporzadkuj code base
 
 if __name__ == "__main__":
-    save_train_test_split("../run/two_datasets_attention/store/")
+    for filename in glob("../run/two_datasets_multihot/00/weights/weights-improvement*"):
+        print(filename)

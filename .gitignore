@@ -140,3 +140,5 @@ trials.mid
 evaluation_models/hierdec-mel_16bar.tar
 
 utilities/iou_scores
+datasets.zip
+evaluation_models/compose.zip

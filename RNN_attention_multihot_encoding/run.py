@@ -5,7 +5,7 @@ from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, CSVLogger
 from RNN_attention_multihot_encoding.model import create_network
 from utilities.midi_utils import process_midi
 
-force_run_id = '0' #None
+force_run_id = '0' #None #Integer #'reset' #'resetX'
 next_run = True
 n_if_shortened = None #100 #None
 epochs = 100 #1
@@ -107,11 +107,11 @@ tensorboard = tf.keras.callbacks.TensorBoard(log_dir=os.path.join(run_folder, "l
 csv_logger = CSVLogger(os.path.join(run_folder, 'log.csv'), append=True, separator=';')
 
 callbacks_list = [
-    checkpoint1
-    , checkpoint2
-    , early_stopping
-    , tensorboard
-    , csv_logger
+    checkpoint1,
+    checkpoint2,
+    early_stopping,
+    tensorboard,
+    csv_logger,
  ]
 model.save_weights(os.path.join(weights_folder, "weights.h5"))
 history_callback = model.fit(network_input, network_output

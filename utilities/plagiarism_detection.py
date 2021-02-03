@@ -150,18 +150,5 @@ if __name__ == "__main__":
     process_plagiarism_for_database()
 
 
-#  86%|████████▋ | 76/88 [6:08:16<1:52:00, 560.02s/it]
-#   0%|          | 0/50 [00:00<?, ?it/s]
-# Traceback (most recent call last):
-#   File "C:/Users/piotr/Desktop/Piotr/studia-praca/Part_II_project/Music-Generation/utilities/plagiarism_detection.py", line 149, in <module>
-#     process_plagiarism_for_database()
-#   File "C:/Users/piotr/Desktop/Piotr/studia-praca/Part_II_project/Music-Generation/utilities/plagiarism_detection.py", line 115, in process_plagiarism_for_database
-#     score, fragment_song, fragment_database = local_alignment(multihot_tuples_song, multihot_tuples_db, iou_scores)
-#   File "C:/Users/piotr/Desktop/Piotr/studia-praca/Part_II_project/Music-Generation/utilities/plagiarism_detection.py", line 32, in local_alignment
-#     iou = IoU(A[i-1], B[j-1], iou_scores)
-#   File "C:/Users/piotr/Desktop/Piotr/studia-praca/Part_II_project/Music-Generation/utilities/plagiarism_detection.py", line 21, in IoU
-#     return iou_scores[multihot1].get(multihot2, 0)
-# KeyError: (1.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0)
-#  86%|████████▋ | 76/88 [6:08:16<58:08, 290.74s/it]
 
 

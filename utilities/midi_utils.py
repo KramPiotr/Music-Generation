@@ -128,7 +128,7 @@ def translate_chord_string(str_):
     return list(map(lambda x: -1 if x == "R" or x == "S" else int(note.Note(x).pitch.ps) % 12, str_.split(".")))
 
 def get_initialized_song(init=None, str=False):
-    if init:
+    if init is not None:
         if init == 'ttls':
             notes = [[0], [0], [7], [7], [9], [9], [7]]
             durations = [0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.5]

@@ -49,7 +49,7 @@ def create_network(n_notes, n_durations, embed_size=100, rnn_units=256, use_atte
     else:
         att_model = None
 
-    opti = RMSprop(lr=0.001)
+    opti = RMSprop(lr=0.001) #add decay?
     model.compile(loss=['categorical_crossentropy', 'categorical_crossentropy'], optimizer=opti)
 
     return model, att_model

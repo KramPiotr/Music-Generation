@@ -28,27 +28,30 @@ def parse_dataset(dataset, store_dir, seq_len, raw=False): #TODO extract also no
             n_exceptions += process_midi(dir, seq_len, output_dir, raw)
     print(f"Number of exceptions encountered when reading midi files: {n_exceptions}")
 
-def merge_data():
+def merge_data(with_raw = True):
     global store_dir
     notes = []
     durations = []
-    raw_notes = []
-    raw_durations = []
+    if with_raw:
+        raw_notes = []
+        raw_durations = []
     for dir in tqdm(os.listdir(store_dir)):
         dir = os.path.join(store_dir, dir)
         n, d = retrieve_notes_and_durations(dir)
-        rn, rd = retrieve_notes_and_durations(os.path.join(dir, "raw"))
         notes.extend(n)
         durations.extend(d)
-        raw_notes.extend(rn)
-        raw_durations.extend(rd)
+        if with_raw:
+            rn, rd = retrieve_notes_and_durations(os.path.join(dir, "raw"))
+            raw_notes.extend(rn)
+            raw_durations.extend(rd)
     store = os.path.join(store_dir, "overall")
     save_notes_and_durations(store, notes, durations)
-    raw_store = os.path.join(store, "raw")
-    save_notes_and_durations(raw_store, raw_notes, raw_durations)
-    process_notes_and_durations(notes, durations, seq_len, store)
-    process_notes_and_durations(raw_notes, raw_durations, seq_len, raw_store)
+    #process_notes_and_durations(notes, durations, seq_len, store)
+    if with_raw:
+        raw_store = os.path.join(store, "raw")
+        save_notes_and_durations(raw_store, raw_notes, raw_durations)
+        #process_notes_and_durations(raw_notes, raw_durations, seq_len, raw_store)
 
-parse_dataset(dataset, store_dir, seq_len)
-#merge_data()
+#parse_dataset(dataset, store_dir, seq_len)
+merge_data(False)
 

@@ -6,17 +6,26 @@ from music21 import stream
 import sys
 import collections
 from RNN_attention.model import create_network
-from utilities.utils import sample_with_temp
+from utilities.utils import sample_with_temp, retrieve_distincts_and_lookups, retrieve_best_model
 from utilities.midi_utils import get_note, get_initialized_song
 from utilities.run_utils import id_to_str
 
-def predict(init, notes_temp, duration_temp, weights_file = 'weights.h5', version_id=0):
+#def predict(init, notes_temp, duration_temp, weights_file = 'weights.h5', version_id=0):
+def predict(section, dataset_version, version_id,  notes_temp, duration_temp, weights_file = 'weights.h5', init=None, max_extra_notes=200):
     #init: 'cfge' #'ttls' #None
     # run params
-    model_kind = 'two_datasets_attention' #"MIREX_multihot"
-    run_folder = f'../run/{model_kind}/{id_to_str(version_id)}/compose'
+    #section = 'two_datasets_attention' #"MIREX_multihot"
+    section_folder = f"../run/{section}/"
+    if not os.path.exists(section_folder):
+        raise ValueError(f"The specified section doesn't exist in the run directory: {section_folder}")
 
-    # model params
+    model_folder = os.path.join(section_folder, id_to_str(version_id))
+    if not os.path.exists(model_folder):
+        raise ValueError(f"The specified model version is invalid: {version_id}")
+
+    compose_folder = os.path.join(model_folder, "compose")
+
+    # model params TODO params in arguments
     seq_len = 32
     embed_size = 100
     rnn_units = 256
@@ -25,24 +34,30 @@ def predict(init, notes_temp, duration_temp, weights_file = 'weights.h5', versio
 
     #Load the lookup tables
 
-    retrieve_folder = "../run/two_datasets_attention/store"
 
-    with open(os.path.join(retrieve_folder, 'distincts'), 'rb') as f:
-        notes_names, n_notes, duration_names, n_durations = pkl.load(f)
 
-    with open(os.path.join(retrieve_folder, 'lookups'), 'rb') as f:
-        note_to_int, int_to_note, duration_to_int, int_to_duration = pkl.load(f)
+    store_folder = os.path.join(section_folder, "store")
+    if not os.path.exists(store_folder):
+        store = "_".join(section.split("_")[:-1]) + "_store"
+        store_folder = os.path.join("../run", store)
 
-    #Build the model
+    store_folder = os.path.join(store_folder, f"version_{dataset_version}")
+    if section.endswith("multihot"):
+        (duration_name, n_durations), (duration_to_int, int_to_duration) = retrieve_distincts_and_lookups(store_folder)
+        n_notes = 12
+    else:
+        (notes_names, n_notes, duration_names, n_durations), (note_to_int, int_to_note, duration_to_int, int_to_duration) = retrieve_distincts_and_lookups(store_folder)
 
-    weights_folder = f"../run/two_datasets_attention/{version_id}/weights"
-    #weights_file = 'weights.h5'
+    att_model, model = retrieve_best_model(model_folder)
 
-    model, att_model = create_network(n_notes, n_durations, embed_size=embed_size, rnn_units=rnn_units, use_attention=use_attention)
-
-    # Load the weights to each node
-    weight_source = os.path.join(weights_folder, weights_file)
-    model.load_weights(weight_source)
+    # weights_folder = os.path.join(model_folder, "weights")
+    # #weights_file = 'weights.h5'
+    #
+    # model, att_model = create_network(n_notes, n_durations, embed_size=embed_size, rnn_units=rnn_units, use_attention=use_attention)
+    #
+    # # Load the weights to each node
+    # weight_source = os.path.join(weights_folder, weights_file)
+    # model.load_weights(weight_source)
     #model.summary()
 
     #Build your own phrase
@@ -50,8 +65,7 @@ def predict(init, notes_temp, duration_temp, weights_file = 'weights.h5', versio
     # prediction params
     #notes_temp = 0.5
     #duration_temp = 0.5
-    max_extra_notes = 50
-    max_seq_len = 32
+    #max_extra_notes = 50
     seq_len = 32
 
     # notes = ['START', 'D3', 'D3', 'E3', 'D3', 'G3', 'F#3','D3', 'D3', 'E3', 'D3', 'G3', 'F#3','D3', 'D3', 'E3', 'D3', 'G3', 'F#3','D3', 'D3', 'E3', 'D3', 'G3', 'F#3']
@@ -61,6 +75,7 @@ def predict(init, notes_temp, duration_temp, weights_file = 'weights.h5', versio
     # notes = ['START', 'F#3', 'G#3', 'F#3', 'E3', 'F#3', 'G#3', 'F#3', 'E3', 'F#3', 'G#3', 'F#3', 'E3','F#3', 'G#3', 'F#3', 'E3', 'F#3', 'G#3', 'F#3', 'E3', 'F#3', 'G#3', 'F#3', 'E3']
     # durations = [0, 0.75, 0.25, 1, 1, 1, 2, 0.75, 0.25, 1, 1, 1, 2, 0.75, 0.25, 1, 1, 1, 2, 0.75, 0.25, 1, 1, 1, 2]
 
+# TODO finish from here
     # Customize the starting point
     notes, durations = get_initialized_song(init, True)
 
@@ -120,7 +135,7 @@ def predict(init, notes_temp, duration_temp, weights_file = 'weights.h5', versio
         notes_input_sequence.append(n)
         durations_input_sequence.append(d)
 
-        if len(notes_input_sequence) > max_seq_len:
+        if len(notes_input_sequence) > seq_len:
             notes_input_sequence = notes_input_sequence[1:]
             durations_input_sequence = durations_input_sequence[1:]
 
@@ -177,7 +192,7 @@ def predict(init, notes_temp, duration_temp, weights_file = 'weights.h5', versio
         #     midi_stream.append(new_note)
 
     timestr = time.strftime("%Y_%m_%d--%H_%M_%S")
-    output_folder = os.path.join(run_folder, f"output-{timestr}-{str(init)}-{notes_temp}-{duration_temp}-{weights_file}")
+    output_folder = os.path.join(compose_folder, f"output-{timestr}-{str(init)}-{notes_temp}-{duration_temp}-{weights_file}")
     os.makedirs(output_folder, exist_ok=True)
     midi_stream.write('midi', fp=os.path.join(output_folder, f'output_init_{init if init else "none"}.mid'))
     with open(os.path.join(output_folder, f"analysis.txt"), "w") as f:
@@ -231,3 +246,6 @@ def predict(init, notes_temp, duration_temp, weights_file = 'weights.h5', versio
     #              rotation_mode="anchor")
     #
     #     plt.show()
+
+if __name__ == "__main__":
+    predict("two_datasets_multihot", 1, 0, 1, 1, weights_file='weights.h5', init=None) #TODO convert into unit test

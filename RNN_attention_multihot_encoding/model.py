@@ -8,7 +8,7 @@ import tensorflow.keras.backend as K
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import RMSprop
 
-def create_network(n_notes, n_durations, seq_len = 32, embed_size=3, rnn_units=64, use_attention=True):
+def create_network(n_notes, n_durations, seq_len = 32, embed_size=100, rnn_units=64, use_attention=True):
     """ create the structure of the neural network """
 
     notes_in = Input(shape=(seq_len, n_notes)) #seq_len -> None
@@ -41,7 +41,7 @@ def create_network(n_notes, n_durations, seq_len = 32, embed_size=3, rnn_units=6
 
     notes_out = Dense(n_notes, activation='sigmoid', name='pitch')(c)
     durations_out = Dense(n_durations, activation='softmax', name='duration')(c)
-    model = Model([notes_in, durations_in], [notes_out, durations_out])
+    model = Model([notes_in, durations_in], [notes_out, durations_out]) #TODO gradient boosting after you see performance of the full-blown model
 
     if use_attention:
         att_model = Model([notes_in, durations_in], alpha)

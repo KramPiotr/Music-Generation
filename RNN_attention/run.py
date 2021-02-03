@@ -8,7 +8,7 @@ from utilities.run_utils import set_run_id
 from utilities.utils import get_distinct, retrieve_notes_and_durations, retrieve_network_input_output, print_to_file
 from RNN_attention.model_specific_utils import create_store
 
-force_run_id = 'reset' #None #Integer #'reset' #'resetX'
+force_run_id = 'reset1' #None #Integer #'reset' #'resetX'
 next_run = True
 n_if_shortened = None #None #100 #None
 epochs = 100 #1
@@ -23,6 +23,7 @@ run_id = set_run_id(os.getcwd(), force_run_id, next_run)
 
 # run params
 section = 'two_datasets_attention'
+dataset_version = 1
 
 section_folder = os.path.join("../run", section)
 run_folder = os.path.join(section_folder, run_id)
@@ -34,9 +35,12 @@ if not os.path.exists(run_folder):
     os.mkdir(os.path.join(run_folder, 'output'))
     os.mkdir(os.path.join(run_folder, 'weights'))
 
-mode = 'build' # 'build'  # 'load' #
+mode = 'load' # 'build'  # 'load' #
 
 store_model_folder = os.path.join(section_folder, "store")
+store_model_folder = os.path.join(store_model_folder, f"version_{dataset_version}")
+
+
 if mode == 'build':
     create_store("../run/two_datasets_store", store_model_folder, seq_len)
 
@@ -82,7 +86,7 @@ early_stopping = EarlyStopping(
 
 tensorboard = tf.keras.callbacks.TensorBoard(log_dir=os.path.join(run_folder, "logs"), histogram_freq=1),
 
-csv_logger = CSVLogger(os.path.join(run_folder, 'log.csv'), append=True, separator=';')
+csv_logger = CSVLogger(os.path.join(run_folder, 'log.csv'), append=False, separator=';')
 
 callbacks_list = [
     checkpoint1
