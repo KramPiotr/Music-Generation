@@ -55,6 +55,11 @@ def save_fragment(notes, durations, fragment, save_path):
     save_song_from_notes_and_durations(notes, durations, type="multihot", path=save_path)
 
 
+def test_plagiarism(song_path):
+    song = converter.parse(song_path)
+    s_n, s_d = extract_notes(song, None, False)
+
+
 def process_plagiarism(song_path, database_path, hardcode=None):
     song = converter.parse(song_path)
     s_n, s_d = extract_notes(song, None, False)

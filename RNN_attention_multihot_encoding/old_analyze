@@ -51,3 +51,46 @@
 # analyze_frequencies_by_group(notes, vis_path, n_labels=4)
 # plot_frequencies_by_pitch(notes, vis_path)
 # analyze_frequencies_by_duration(durations, vis_path)
+
+
+# def test_plots():
+#     analyze_dir = "../run/two_datasets_store/version_1/analysis/"
+#     os.makedirs(analyze_dir, exist_ok=True)
+#     plot, plot2 = plot_frequencies_by_pitch(analyze_dir)
+#     occurence = np.arange(12)
+#     plt.subplot(1, 2, 1)
+#     plot()
+#     plt.subplot(1, 2, 2)
+#     plot2()
+#     plt.show()
+
+
+# suffix = "_after_repetition_removal"
+#
+# run_id = '00'
+# run_folder = "../run/MIREX_multihot"
+# run_folder = os.path.join(run_folder, run_id)
+# store_folder = os.path.join(run_folder, 'store')
+#
+#
+# # visualize
+# # maybe remove the ones with duration over 4
+# # maybe remove the ones containing more than 4 notes on at the same time
+# # check for 0s in durations
+#
+# with open(os.path.join(store_folder, 'notes'), 'rb') as f:
+#     notes = pkl.load(f)
+# with open(os.path.join(store_folder, 'durations'), 'rb') as f:
+#     durations = pkl.load(f)
+# # with open(os.path.join(store_folder, 'lookups'), 'rb') as f:
+# #     duration_to_int, int_to_duration = pkl.load(f)
+# # with open(os.path.join(store_folder, 'distincts'), 'rb') as f:
+# #     distincts = pkl.load(f)
+# # with open(os.path.join(store_folder, 'network_input'), 'rb') as f:
+# #     network_input = pkl.load(f)
+# # with open(os.path.join(store_folder, 'network_output'), 'rb') as f:
+# #     network_output = pkl.load(f)
+#
+# data_path = "../run/two_datasets_store"
+# notes, durations = retrieve_notes_and_durations(data_path)
+# basic_analysis_no_dl(notes, durations, os.path.join(data_path, "analysis"))

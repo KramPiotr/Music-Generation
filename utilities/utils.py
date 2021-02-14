@@ -1,13 +1,18 @@
 import numpy as np
 from keras.utils import np_utils
 from tensorflow.keras.models import model_from_json, Model
+from tensorflow.keras.utils import plot_model
 import os
 import pickle as pkl
+#print(os.getcwd())
+import sys
+sys.path.append(os.path.dirname(os.getcwd()))
 from utilities.notes_utils import multi_hot_encoding_12_tones
 import ntpath
 import sys
 import re
 from glob import glob
+from functools import partial
 
 def get_distinct(elements):
     # Get all pitch names
@@ -59,6 +64,37 @@ def prepare_sequences(notes, durations, lookups, distincts, seq_len=32):
 
     return network_input, network_output
 
+def find_interpolated(val, arr, out_arr):
+    idx = np.searchsorted(arr, val)
+    ld = val - arr[idx-1] if idx > 0 else val
+    rd = arr[idx] - val if idx < len(arr) else 1 - val
+    lo = out_arr[idx-1] if idx > 0 else 0
+    ro = out_arr[idx] if idx < len(arr) else 1
+    return np.interp(0, (-ld, rd), (lo, ro))
+
+# def multihot_sample(preds, temperature, firing_loc):
+#     firing_percentiles = np.array(retrieve(firing_loc, "firing_percentiles"))
+#     pcntl = np.array(retrieve(firing_loc, "percentile_names"))
+#     firing_fractions = np.array(retrieve(firing_loc, "firing_fractions"))
+#     for i, p in enumerate(preds):
+#         frac_off = find_interpolated(p, firing_percentiles[i][0], pcntl)
+#         pctnl_on = find_interpolated(p, firing_percentiles[i][1], pcntl)
+#
+#     fraction = np.random.uniform(0, 1, len(preds)) >= firing_fractions
+#     is_on = preds >= firing_tresholds
+#     add_random = ~is_on^fraction # in other words nxor: (is_on and fraction) or (not is_on and not fraction)
+#     random_tresholds = firing_tresholds + add_random * np.random.normal(0, temperature * firing_tresholds, len(preds))
+#     return (preds >= random_tresholds).astype(int)
+
+# def multihot_sample(preds, temperature, firing_loc):
+#     firing_tresholds = np.array(retrieve(firing_loc, "firing_tresholds"))
+#     firing_fractions = np.array(retrieve(firing_loc, "firing_fractions"))
+#     fraction = np.random.uniform(0, 1, len(preds)) >= firing_fractions
+#     is_on = preds >= firing_tresholds
+#     add_random = ~is_on^fraction # in other words nxor: (is_on and fraction) or (not is_on and not fraction)
+#     random_tresholds = firing_tresholds + add_random * np.random.normal(0, temperature * firing_tresholds, len(preds))
+#     return (preds >= random_tresholds).astype(int)
+
 def sample_with_temp(preds, temperature):
     if temperature == 0:
         return np.argmax(preds)
@@ -76,10 +112,13 @@ def save_notes_and_durations(store_folder, notes, durations):
     with open(os.path.join(store_folder, 'durations'), 'wb') as f:
         pkl.dump(durations, f)
 
-def retrieve(store_folder, name):
+def retrieve(store_folder, name, nonexistent = None):
     path_ = os.path.join(store_folder, name)
     if not os.path.exists(path_):
-        raise Exception(f"Invalid path {store_folder} for the {name} object")
+        if nonexistent is None:
+            raise Exception(f"Invalid path {store_folder} for the {name} object")
+        else:
+            return nonexistent
     with open(path_, 'rb') as f:
         object_ = pkl.load(f)
     return object_
@@ -87,12 +126,14 @@ def retrieve(store_folder, name):
 def retrieve_distincts_and_lookups(store_folder):
     return retrieve(store_folder, "distincts"), retrieve(store_folder, "lookups")
 
-def retrieve_notes_and_durations(store_folder):
-    return retrieve(store_folder, "notes"), retrieve(store_folder, "durations")
+def retrieve_notes_and_durations(store_folder, **kwargs):
+    return retrieve(store_folder, "notes", **kwargs), retrieve(store_folder, "durations", **kwargs)
 
 def retrieve_network_input_output(store_folder, n_if_shortened=None):
     in_, out_ = retrieve(store_folder, "network_input"), retrieve(store_folder, "network_output")
     if n_if_shortened is not None:
+        if n_if_shortened < 1:
+            n_if_shortened = int(n_if_shortened * len(in_[0]))
         in_ = [x[:n_if_shortened] for x in in_]
         out_ = [x[:n_if_shortened] for x in out_]
     return (in_, out_)
@@ -142,7 +183,7 @@ def save_train_test_split(store_folder, io_files=None):
         os.remove(os.path.join(store_folder, "network_output"))
 
 def print_to_file(str_, file, indent_level = 0):
-    str_ = " " * indent_level * 4 + str_
+    str_ = " " * indent_level * 4 + str(str_)
     print(str_, file=file)
     print(str_)
 
@@ -175,11 +216,38 @@ def retrieve_attention_model(model):
         print("The model has no 'attention' layer. Returning None in retrieve_attention_model")
         return None
 
-def retrieve_best_model(dir):
+def retrieve_best_model(dir, weights_file=None):
     model = retrieve_model_from_json(dir)
-    weights_file = glob(os.path.join(os.path.join(dir, "weights"), "weights-improvement*"))[-1]
+    weights_file = glob(os.path.join(os.path.join(dir, "weights"), "weights-improvement*"))[-1] if weights_file is None else os.path.join(os.path.join(dir, "weights"), weights_file)
+    if not os.path.exists(weights_file):
+        raise ValueError(f"Invalid name of the weights file: {weights_file}")
     model.load_weights(weights_file)
-    return retrieve_attention_model(model), model
+    return retrieve_attention_model(model), model, os.path.basename(weights_file)
+
+def print_dict(dict_, print):
+    for (key, value) in dict_.items():
+        print(f"{key:<5}{value}")
+
+def visualize_model(model_dir, name=None, **params):
+    _, m, _ = retrieve_best_model(model_dir)
+    if name is None:
+        name = "model" + \
+                ("_with_shapes" if params.get("show_shapes", False) else "") + \
+                ("_with_dtype" if params.get("show_dtype", False) else "")
+    plot_model(m, os.path.join(model_dir, f"{name}.png"), **params)
+
+def save_fig(plt, store_dir, name):
+    plt.savefig(os.path.join(store_dir, name))
+    pdf_dir = os.path.join(store_dir, "pdfs")
+    os.makedirs(pdf_dir, exist_ok=True)
+    plt.savefig(os.path.join(pdf_dir, f"{name}.pdf"))
+
+def par_dir(dir):
+    dir = str(dir).rstrip("/").rstrip("\\")
+    return os.path.dirname(dir)
+
+
+
 
 ##TODO Question how to sample with temperature from multihot encoding, przygotuj inne pytania na spotkanie
 
@@ -187,5 +255,8 @@ def retrieve_best_model(dir):
 ## uporzadkuj code base
 
 if __name__ == "__main__":
-    for filename in glob("../run/two_datasets_multihot/00/weights/weights-improvement*"):
-        print(filename)
+    pass
+    # for filename in glob("../run/two_datasets_multihot/00/weights/weights-improvement*"):
+    #     print(filename)
+    #describe_dataset("../run/two_datasets_attention/store/version_0")
+

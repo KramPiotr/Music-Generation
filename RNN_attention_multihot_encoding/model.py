@@ -1,5 +1,5 @@
 import numpy as np
-from tensorflow.keras.layers import LSTM, Input, Dropout, Dense, Activation, Embedding, Concatenate, Reshape
+from tensorflow.keras.layers import LSTM, Input, Dropout, Dense, Activation, Embedding, Concatenate, Reshape, BatchNormalization
 from tensorflow.keras.layers import Flatten, RepeatVector, Permute, TimeDistributed
 from tensorflow.keras.layers import Multiply, Lambda, Softmax
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
@@ -8,7 +8,7 @@ import tensorflow.keras.backend as K
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import RMSprop
 
-def create_network(n_notes, n_durations, seq_len = 32, embed_size=100, rnn_units=64, use_attention=True):
+def create_network(n_notes, n_durations, seq_len = 32, embed_size=100, rnn_units=64, dense_units=256, n_dense = 1, use_attention=True):
     """ create the structure of the neural network """
 
     notes_in = Input(shape=(seq_len, n_notes)) #seq_len -> None
@@ -26,21 +26,23 @@ def create_network(n_notes, n_durations, seq_len = 32, embed_size=100, rnn_units
         x = LSTM(rnn_units, return_sequences=True)(x)
         x = Dropout(0.2)(x)
 
-        e = Dense(1, activation='tanh')(x)
-        e = Reshape([-1])(e)
-        alpha = Activation('softmax')(e)
+        y = Dense(1, activation='tanh')(x)
+        y = Reshape([-1])(y)
+        alpha = Activation('softmax')(y)
 
         alpha_repeated = Permute([2, 1])(RepeatVector(rnn_units)(alpha))
 
-        c = Multiply()([x, alpha_repeated])
-        c = Lambda(lambda xin: K.sum(xin, axis=1), output_shape=(rnn_units,))(c)
+        z = Multiply()([x, alpha_repeated])
+        z = Lambda(lambda xin: K.sum(xin, axis=1), output_shape=(rnn_units,))(z)
 
     else:
-        c = LSTM(rnn_units)(x) #return_sequences=True
-        c = Dropout(0.2)(c)
+        z = LSTM(rnn_units)(x) #return_sequences=True
+        z = Dropout(0.2)(z)
 
-    notes_out = Dense(n_notes, activation='sigmoid', name='pitch')(c)
-    durations_out = Dense(n_durations, activation='softmax', name='duration')(c)
+    for _ in range(n_dense):
+        z = Dense(dense_units)(z)
+    notes_out = Dense(n_notes, activation='sigmoid', name='pitch')(z)
+    durations_out = Dense(n_durations, activation='softmax', name='duration')(z)
     model = Model([notes_in, durations_in], [notes_out, durations_out]) #TODO gradient boosting after you see performance of the full-blown model
 
     if use_attention:

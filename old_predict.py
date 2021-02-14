@@ -5,13 +5,15 @@ import numpy as np
 from music21 import stream
 import sys
 import collections
-import matplotlib.pyplot as plt
+#from RNN_attention.model import create_network
+from RNN_attention_multihot_encoding.model import create_network
 from utilities.utils import sample_with_temp, retrieve_distincts_and_lookups, retrieve_best_model, multihot_sample
 from utilities.midi_utils import get_note, get_initialized_song, translate_chord
 from utilities.run_utils import id_to_str
 from utilities.notes_utils import multi_hot_encoding_12_tones
 
-def predict(section, version_id, dataset_version, notes_temp, duration_temp, weights_file = None, init=None, save_with_time=True, min_extra_notes = 50, max_extra_notes=200):
+#def predict(init, notes_temp, duration_temp, weights_file = 'weights.h5', version_id=0):
+def predict(section, version_id, dataset_version, notes_temp, duration_temp, weights_file = None, init=None, min_extra_notes = 50, max_extra_notes=200):
     #init: 'cfge' #'ttls' #None
     # run params
     #section = 'two_datasets_attention' #"MIREX_multihot"
@@ -25,6 +27,17 @@ def predict(section, version_id, dataset_version, notes_temp, duration_temp, wei
 
     compose_folder = os.path.join(model_folder, "compose")
 
+    # model params
+    # seq_len = 32
+    # embed_size = 100
+    # rnn_units = 256
+    # use_attention = True
+    # n_notes = 12
+
+    #Load the lookup tables
+
+
+
     store_folder = os.path.join(section_folder, "store")
     if not os.path.exists(store_folder):
         store = "_".join(section.split("_")[:-1]) + "_store"
@@ -32,16 +45,40 @@ def predict(section, version_id, dataset_version, notes_temp, duration_temp, wei
 
     store_folder = os.path.join(store_folder, f"version_{dataset_version}")
     if section.endswith("multihot"):
-        _, (duration_to_int, int_to_duration) = retrieve_distincts_and_lookups(store_folder)
+        (duration_name, n_durations), (duration_to_int, int_to_duration) = retrieve_distincts_and_lookups(store_folder)
+        # n_notes = 12
     else:
-        _, (note_to_int, int_to_note, duration_to_int, int_to_duration) = retrieve_distincts_and_lookups(store_folder)
+        (notes_names, n_notes, duration_names, n_durations), (note_to_int, int_to_note, duration_to_int, int_to_duration) = retrieve_distincts_and_lookups(store_folder)
 
     att_model, model, weights_file = retrieve_best_model(model_folder, weights_file=weights_file)
 
     use_attention = att_model is not None
 
+    # weights_folder = os.path.join(model_folder, "weights")
+    # #weights_file = 'weights.h5'
+    #
+    # model1, att_model1 = create_network(n_notes, n_durations, embed_size=embed_size, rnn_units=rnn_units, use_attention=use_attention)
+    # model2, att_model2 = create_network(n_notes, n_durations, embed_size=embed_size, rnn_units=rnn_units, use_attention=use_attention)
+    #
+    # # Load the weights to each node
+    # weight_source = os.path.join(os.path.join(model_folder, "weights"), "weights.h5")
+    # model2.load_weights(weight_source)
+    #model.summary()
+
+    #Build your own phrase
+
+    # prediction params
+    #notes_temp = 0.5
+    #duration_temp = 0.5
+    #max_extra_notes = 50
     seq_len = 32
 
+    # notes = ['START', 'D3', 'D3', 'E3', 'D3', 'G3', 'F#3','D3', 'D3', 'E3', 'D3', 'G3', 'F#3','D3', 'D3', 'E3', 'D3', 'G3', 'F#3','D3', 'D3', 'E3', 'D3', 'G3', 'F#3']
+    # durations = [0, 0.75, 0.25, 1, 1, 1, 2, 0.75, 0.25, 1, 1, 1, 2, 0.75, 0.25, 1, 1, 1, 2, 0.75, 0.25, 1, 1, 1, 2]
+
+
+    # notes = ['START', 'F#3', 'G#3', 'F#3', 'E3', 'F#3', 'G#3', 'F#3', 'E3', 'F#3', 'G#3', 'F#3', 'E3','F#3', 'G#3', 'F#3', 'E3', 'F#3', 'G#3', 'F#3', 'E3', 'F#3', 'G#3', 'F#3', 'E3']
+    # durations = [0, 0.75, 0.25, 1, 1, 1, 2, 0.75, 0.25, 1, 1, 1, 2, 0.75, 0.25, 1, 1, 1, 2, 0.75, 0.25, 1, 1, 1, 2]
     att = section.endswith("attention")
 
     # Customize the starting point
@@ -121,10 +158,24 @@ def predict(section, version_id, dataset_version, notes_temp, duration_temp, wei
             notes_input_sequence = notes_input_sequence[1:]
             durations_input_sequence = durations_input_sequence[1:]
 
+        #     print(note_result)
+        #     print(duration_result)
+
         if (att and note == "S") or (not att and d == 0):
             break
 
-    # prediction_output = [p for p in prediction_output if p != -1]  probably unnecessary
+    # prediction_output = [p for p in prediction_output if p != -1] #TODO check if still necessary
+
+    # overall_preds = np.transpose(np.array(overall_preds))
+    # print(f'Generated sequence of {len(prediction_output)} notes')
+    #
+    # fig, ax = plt.subplots(figsize=(15, 15))
+    # ax.set_yticks([int(j) for j in range(35, 70)])
+    #
+    # plt.imshow(overall_preds[35:70, :], origin="lower", cmap='coolwarm', vmin=-0.5, vmax=0.5,
+    #            extent=[0, max_extra_notes, 35, 70]
+    #
+    #            )
 
     #convert the output from the prediction to notes and create a midi file from the notes
 
@@ -136,8 +187,33 @@ def predict(section, version_id, dataset_version, notes_temp, duration_temp, wei
     for note in prediction_output:
         midi_stream.append(note)
 
-    timestr = "-" + time.strftime("%Y_%m_%d--%H_%M_%S") if save_with_time else ""
-    output_folder = os.path.join(compose_folder, f"output{timestr}-{str(init)}-{notes_temp}-{duration_temp}-{weights_file}")
+        # note_pattern, duration_pattern = pattern
+        # # pattern is a chord
+        # if ('.' in note_pattern):
+        #     notes_in_chord = note_pattern.split('.')
+        #     chord_notes = []
+        #     for current_note in notes_in_chord:
+        #         new_note = note.Note(current_note)
+        #         new_note.duration = duration.Duration(duration_pattern)
+        #         new_note.storedInstrument = instrument.Violoncello()
+        #         chord_notes.append(new_note)
+        #     new_chord = chord.Chord(chord_notes)
+        #     midi_stream.append(new_chord)
+        # elif note_pattern == 'rest':
+        # # pattern is a rest
+        #     new_note = note.Rest()
+        #     new_note.duration = duration.Duration(duration_pattern)
+        #     new_note.storedInstrument = instrument.Violoncello()
+        #     midi_stream.append(new_note)
+        # elif note_pattern != 'START':
+        # # pattern is a note
+        #     new_note = note.Note(note_pattern)
+        #     new_note.duration = duration.Duration(duration_pattern)
+        #     new_note.storedInstrument = instrument.Violoncello()
+        #     midi_stream.append(new_note)
+
+    timestr = time.strftime("%Y_%m_%d--%H_%M_%S")
+    output_folder = os.path.join(compose_folder, f"output-{timestr}-{str(init)}-{notes_temp}-{duration_temp}-{weights_file}")
     os.makedirs(output_folder, exist_ok=True)
     midi_stream.write('midi', fp=os.path.join(output_folder, f'output_init_{init}.mid'))
     with open(os.path.join(output_folder, f"analysis.txt"), "w") as f:
@@ -162,32 +238,6 @@ def predict(section, version_id, dataset_version, notes_temp, duration_temp, wei
         for d, occ in collections.Counter(duration_predictions).most_common():
             print(f"{str(d):<30}{occ}")
         sys.stdout = original_stdout
-
-    # Plots
-
-    overall_preds = np.transpose(np.array(overall_preds))
-    overall_preds[overall_preds < 1/480] = 0
-    print(f'Generated sequence of {len(prediction_output)} notes')
-
-    plt.matshow(np.log(overall_preds))
-    #plt.matshow(np.log(overall_preds[:, 40:60]))
-
-    cb_ticks = np.linspace(overall_preds.min(), overall_preds.max(), 10)
-    cbar = plt.colorbar(ticks=np.log(cb_ticks), extend='both')
-    cbar.ax.set_yticklabels(cb_ticks)
-
-    tick_candidates = np.sort(np.sum(overall_preds, axis=-1).argsort()[-100:])
-    ticks = [tick_candidates[0]]
-    for i in range(1, len(tick_candidates)):
-        if tick_candidates[i] - ticks[-1] <= 5:
-            continue
-        else:
-            ticks.append(tick_candidates[i])
-
-    labels = [int_to_note[t] for t in ticks]
-    plt.yticks(ticks, labels)
-    plt.title("Predictions visualized")
-    plt.savefig(os.path.join(output_folder, "predictions.pdf"))
 
     # ## attention plot
     # if use_attention:
@@ -220,6 +270,4 @@ def predict(section, version_id, dataset_version, notes_temp, duration_temp, wei
 
 if __name__ == "__main__":
     np.random.seed(0)
-    #predict("two_datasets_multihot", 1, 1, 1, 1) #TODO convert into unit test
-    predict("two_datasets_attention", 3, 1, 1, 1, init="cfge") #TODO convert into unit test
-    predict("two_datasets_attention", 3, 1, 1, 1, init="ttls") #TODO convert into unit test
+    predict("two_datasets_multihot", 1, 1, 1, 1) #TODO convert into unit test

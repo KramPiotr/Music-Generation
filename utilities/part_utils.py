@@ -85,25 +85,8 @@ def process_notes_and_durations(notes, durations, seq_len, store_folder): #TODO 
     with open(os.path.join(store_folder, 'network_output'), 'wb') as f:
         pkl.dump(network_output, f)
 
-def merge_datasets(data_dirs, store_dir, seq_len):
-    notes = []
-    durations = []
-    for dir in data_dirs:
-        n, d = retrieve_notes_and_durations(dir)
-        notes.extend(n)
-        durations.extend(d)
-    save_notes_and_durations(store_dir, notes, durations)
-    process_notes_and_durations(notes, durations, seq_len, store_dir)
-    save_train_test_split(store_dir)
 
 if __name__ == "__main__":
-    datasets = [
-        "../run/MIREX_multihot/00/store/processed",
-        "../processed_midi/MIDI_archive_part_preprocess/overall"
-    ]
-
-    save_dir = "../run/two_datasets_store/version_"
-
-    #merge_datasets(datasets, save_dir, 32)
-    for no in ("1", "0"):
-        save_train_test_split(save_dir+no)
+    pass
+    # for no in ("1", "0"):
+    #     save_train_test_split(save_dir+no)

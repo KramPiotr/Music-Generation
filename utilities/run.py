@@ -5,7 +5,7 @@ from utilities.run_utils import set_run_id
 from utilities.utils import get_distinct, retrieve, retrieve_network_input_output, print_to_file, save_model_to_json
 import shutil
 
-def run(section, dataset_version, create_network, network_params, force_run_id=None, next_run=True, trial_run=False, descr=None):
+def run(section, dataset_version, create_network, network_params, generate = True, force_run_id=None, next_run=True, trial_run=False, descr=None):
     '''
     Run the model
 
@@ -13,6 +13,7 @@ def run(section, dataset_version, create_network, network_params, force_run_id=N
     :param dataset_version: number indicating the dataset's version
     :param create_network: function used to create and compile the model
     :param network_params: dictionary of arguments and values applied to create_network
+    :param generate: generate music after training the model
     :param force_run_id:
         possible values:
          - None - continue with the current run_id
@@ -134,6 +135,16 @@ def run(section, dataset_version, create_network, network_params, force_run_id=N
         for n, r in zip(model.metrics_names, results):
             print_to_file(f"{n:>13}: {r:.4f}", f)
 
+    if section.endswith("multihot"):
+        from RNN_attention_multihot_encoding.model_specific_utils import record_firing
+        record_firing(run_folder, os.path.join(store_model_folder, "test"), test=trial_run)
+
+    if generate:
+        #TODO predict
+        pass
+
+
+
 #TODO test the model and save to the file, maybe connect to 'predict' as well
 
 if __name__ == "__main__":
@@ -145,13 +156,14 @@ if __name__ == "__main__":
     }
     from RNN_attention_multihot_encoding.model import create_network
 
-    # run("two_datasets_multihot", 1, create_network, network_params, force_run_id='reset0', next_run=False, trial_run=True, descr="Trial, safe to delete")
-    run("two_datasets_multihot", 1, create_network, network_params, force_run_id='reset0', next_run=True, descr="Full model trained on the fixed dataset of 1.300.000 sequences")
+    run("two_datasets_multihot", 1, create_network, network_params, trial_run=True, descr="Trial, safe to delete")
+    # run("two_datasets_multihot", 1, create_network, network_params, descr="Full model trained with the additional Dense layer")
 
     # network_params = {
     #     "embed_size": 100,
     #     "rnn_units": 256,
     #     "use_attention": True,
+    #     "n_dense": 2,
     # }
     # from RNN_attention.model import create_network
-    # run("two_datasets_attention", 1, create_network, network_params, force_run_id='reset2', next_run=False, trial_run=True, descr="Trial of new common run function")
+    # run("two_datasets_attention", 1, create_network, network_params, force_run_id='reset4', next_run=True, descr="Full model trained with the additional Dense layer")

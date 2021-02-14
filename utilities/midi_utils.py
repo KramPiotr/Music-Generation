@@ -20,11 +20,13 @@ def open_midi(midi_path, remove_drums=True):
             mf.tracks[i].events = [ev for ev in mf.tracks[i].events if ev.channel != 10]
     return midi.translate.midiFileToStream(mf)
 
-def extract_notes(score, seq_len, with_start=True, raw=False):
+def extract_notes(score, seq_len=None, with_start=True, raw=False):
     parts = instrument.partitionByInstrument(score)
 
     if parts:
-        parts_to_parse = filter(lambda part: len(part) > 3 * seq_len, [part.recurse() for part in parts.parts])
+        parts_to_parse = [part.recurse() for part in parts.parts]
+        if seq_len is not None:
+            parts_to_parse = filter(lambda part: len(part) > 3 * seq_len, parts_to_parse)
     else:  # file has notes in a flat structure
         parts_to_parse = [score.flat.notes]
 
@@ -33,7 +35,7 @@ def extract_notes(score, seq_len, with_start=True, raw=False):
     for notes_to_parse in parts_to_parse:
         part_notes = []
         part_durations = []
-        if with_start:
+        if with_start and seq_len is not None:
             part_notes.extend([[-1]] * seq_len)
             part_durations.extend([0] * seq_len)
 
@@ -46,7 +48,7 @@ def extract_notes(score, seq_len, with_start=True, raw=False):
                     part_notes.append([element.pitch.ps])
 
             if isinstance(element, chord.Chord):
-                durations.append(element.duration.quarterLength)
+                part_durations.append(element.duration.quarterLength)
                 part_notes.append(sorted([pitch.ps for pitch in element.pitches]))
         if not raw:
             part_notes, part_durations = single_part_preprocess(part_notes, part_durations)
@@ -55,12 +57,12 @@ def extract_notes(score, seq_len, with_start=True, raw=False):
 
     return notes, durations
 
-def get_note(note_repr, dur_repr,  str=False, treshold=0.5):
+def get_note(note_repr, dur_repr,  str=False, treshold=None):
     '''
     :param note_repr:
     :param dur_repr:
     :param str:
-    :param treshold: not only describes treshold for multihot note but also indicates that we want to use multihot instead of list representation
+    :param treshold: not only describes treshold for multihot note but also indicates that we want to use multihot instead of list representation, set to 0 with binary data
     :return:
     '''
     dur = duration.Duration(dur_repr)
@@ -75,8 +77,8 @@ def get_note(note_repr, dur_repr,  str=False, treshold=0.5):
         else:
             return chord.Chord(pitches, duration=dur)
     else:
-        if treshold:
-            bin_multihot = np.where(note_repr > treshold)[0]
+        if treshold is not None:
+            bin_multihot = np.where(np.array(note_repr) > treshold)[0]
             if sum(bin_multihot) == 0:
                 return note.Rest(duration=dur)
             hots = [int(el) for el in bin_multihot]
@@ -87,9 +89,6 @@ def get_note(note_repr, dur_repr,  str=False, treshold=0.5):
         if len(hots) == 1:
             return note.Note(hots[0], duration=dur)
         return chord.Chord(hots, duration=dur)
-
-
-
 
 def process_midi(dataset, seq_len, store_folder, raw = False, whole_dataset = False):
     midi_files = os.path.join(dataset, "*.mid")
@@ -122,7 +121,8 @@ def process_midi(dataset, seq_len, store_folder, raw = False, whole_dataset = Fa
 
 
 def translate_chord(pitches, separator = " "):
-    return separator.join([pitch.Pitch(p).nameWithOctave for p in pitches])
+    str_ = separator.join([pitch.Pitch(p).nameWithOctave for p in pitches])
+    return str_ if str_ else "R"
 
 def translate_chord_string(str_):
     return list(map(lambda x: -1 if x == "R" or x == "S" else int(note.Note(x).pitch.ps) % 12, str_.split(".")))
