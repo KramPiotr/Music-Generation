@@ -24,7 +24,7 @@ def set_run_id(store_folder, force_run_id, next_run):
         with open(run_id_file, 'w') as f:
             f.write(str(run_id + next_run))
     else:
-        if force_run_id[:5] == "reset":
+        if type(force_run_id) is not int:
             run_id = 0 if len(force_run_id) < 6 else int(force_run_id[5:])
             with open(run_id_file, 'w') as f:
                 f.write(str(run_id + next_run))

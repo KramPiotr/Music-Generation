@@ -5,7 +5,7 @@ from utilities.run_utils import set_run_id
 from utilities.utils import get_distinct, retrieve, retrieve_network_input_output, print_to_file, save_model_to_json
 import shutil
 
-def run(section, dataset_version, create_network, network_params, epochs=100, patience=10, evaluate=True, generate=True, force_run_id=None, next_run=True, trial_run=False, descr=None):
+def run(section, dataset_version, create_network, network_params = None, epochs=100, patience=10, evaluate=True, generate=True, force_run_id=None, next_run=True, trial_run=False, descr=None):
     '''
     Run the model
 
@@ -28,7 +28,8 @@ def run(section, dataset_version, create_network, network_params, epochs=100, pa
     #force_run_id = 'reset1' #None #Integer #'reset' #'resetX'
     #next_run = True
     n_if_shortened = 100 if trial_run else None
-
+    if network_params is None:
+        network_params = {}
     # data params
     # seq_len = 32
     # embed_size = 100
@@ -100,7 +101,7 @@ def run(section, dataset_version, create_network, network_params, epochs=100, pa
     early_stopping = EarlyStopping(
         monitor='val_loss',
         restore_best_weights=True,
-        patience = 3
+        patience = patience
     )
 
     tensorboard = tf.keras.callbacks.TensorBoard(log_dir=os.path.join(run_folder, "logs"), histogram_freq=1),
@@ -142,20 +143,24 @@ def run(section, dataset_version, create_network, network_params, epochs=100, pa
         #TODO predict
         pass
 
+    return (run_id, min(history_callback.history['val_loss']))
 
 
 #TODO test the model and save to the file, maybe connect to 'predict' as well
 
 if __name__ == "__main__":
-    network_params = {
-        "seq_len": 32,
-        "embed_size": 100,
-        "rnn_units": 256,
-        "use_attention": True,
-    }
-    from RNN_attention_multihot_encoding.model import create_network
+    from RNN_attention.model import create_network
+    run("two_datasets_attention", 1, create_network, patience=1, trial_run=True, force_run_id=99, descr="Trial run")
 
-    run("two_datasets_multihot", 1, create_network, network_params, trial_run=True, descr="Trial, safe to delete")
+    # network_params = {
+    #     "seq_len": 32,
+    #     "embed_size": 100,
+    #     "rnn_units": 256,
+    #     "use_attention": True,
+    # }
+    # from RNN_attention_multihot_encoding.model import create_network
+    #
+    # run("two_datasets_multihot", 1, create_network, network_params, trial_run=True, descr="Trial, safe to delete")
     # run("two_datasets_multihot", 1, create_network, network_params, descr="Full model trained with the additional Dense layer")
 
     # network_params = {
