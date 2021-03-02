@@ -8,7 +8,8 @@ import tensorflow.keras.backend as K
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import RMSprop
 
-def create_network(n_notes, n_durations, embed_size=100, rnn_units=256, dense_units=256, n_dense = 1, use_attention=True):
+def create_network(n_notes, n_durations, embed_size=100, rnn_units=256, dense_units=256, n_lstm = 1, n_dense = 1,
+                   drop1 = 0.2, drop2 = 0.2, use_attention=True, learning_rate = 0.001, optimizer = RMSprop):
     """ create the structure of the neural network """
 
     notes_in = Input(shape=(None,))
@@ -19,8 +20,11 @@ def create_network(n_notes, n_durations, embed_size=100, rnn_units=256, dense_un
 
     x = Concatenate()([x1, x2])
 
-    x = LSTM(rnn_units, return_sequences=True)(x)
-    x = Dropout(0.2)(x)
+    for _ in range(n_lstm):
+        x = LSTM(rnn_units, return_sequences=True)(x)
+
+    if drop1 > 0:
+        x = Dropout(drop1)(x)
 
     if use_attention:
 
@@ -42,7 +46,9 @@ def create_network(n_notes, n_durations, embed_size=100, rnn_units=256, dense_un
 
     for _ in range(n_dense):
         z = Dense(dense_units)(z)
-        z = Dropout(0.2) (z)
+
+    if drop2 > 0:
+        z = Dropout(drop2) (z)
 
     notes_out = Dense(n_notes, activation='softmax', name='pitch')(z)
     durations_out = Dense(n_durations, activation='softmax', name='duration')(z)
@@ -53,8 +59,6 @@ def create_network(n_notes, n_durations, embed_size=100, rnn_units=256, dense_un
     else:
         att_model = None
 
-    #opti = RMSprop(lr=0.001) #add decay?
-    opti = RMSprop(lr=0.0003) #add decay? #TODO changed
-    model.compile(loss=['categorical_crossentropy', 'categorical_crossentropy'], optimizer=opti)
+    model.compile(loss=['categorical_crossentropy', 'categorical_crossentropy'], optimizer=optimizer(learning_rate = learning_rate))
 
     return model, att_model

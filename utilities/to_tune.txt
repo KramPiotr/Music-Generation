@@ -1,3 +1,10 @@
-embed_size:
-https://stackoverflow.com/questions/48479915/what-is-the-preferred-ratio-between-the-vocabulary-size-and-embedding-dimension#:~:text=That%20is%2C%20the%20embedding%20vector,be%20a%20good%20parameter%20setting.
-
+embed_size:  [2, 3, 5, 10, 30]
+rnn_units: [32, 64, 128, 256, 512]
+dense_units: [32, 64, 128, 256, 512]
+n_lstm: [1, 2, 3, 4]
+n_dense: [1, 2, 3, 4]
+drop1: [0, 0.2, 0.5, 0.7]
+drop2: [0, 0.2, 0.5, 0.7]
+use_attention: [True, False]
+lr: [0.0001, 0.0003, 0.001, 0.003, 0.01]
+optimizers: [RMSprop, Adam]

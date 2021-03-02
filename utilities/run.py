@@ -5,7 +5,7 @@ from utilities.run_utils import set_run_id
 from utilities.utils import get_distinct, retrieve, retrieve_network_input_output, print_to_file, save_model_to_json
 import shutil
 
-def run(section, dataset_version, create_network, network_params, generate = True, force_run_id=None, next_run=True, trial_run=False, descr=None):
+def run(section, dataset_version, create_network, network_params, epochs=100, patience=10, evaluate=True, generate=True, force_run_id=None, next_run=True, trial_run=False, descr=None):
     '''
     Run the model
 
@@ -28,7 +28,6 @@ def run(section, dataset_version, create_network, network_params, generate = Tru
     #force_run_id = 'reset1' #None #Integer #'reset' #'resetX'
     #next_run = True
     n_if_shortened = 100 if trial_run else None
-    epochs = 100 #1
 
     # data params
     # seq_len = 32
@@ -126,14 +125,14 @@ def run(section, dataset_version, create_network, network_params, generate = Tru
     save_model_to_json(model, run_folder)
     # save_model_to_json(att_model, run_folder, name="att_model")
 
-    test_folder = os.path.join(store_model_folder, "test")
-    test_input, test_output = retrieve_network_input_output(test_folder, n_if_shortened)
-
-    with open(os.path.join(run_folder, f"test_results.txt"), "w") as f:
-        print_to_file(f"Evaluation using a test set containing {len(test_input[0])} sequences", f)
-        results = model.evaluate(test_input, test_output, batch_size=32)
-        for n, r in zip(model.metrics_names, results):
-            print_to_file(f"{n:>13}: {r:.4f}", f)
+    if evaluate:
+        test_folder = os.path.join(store_model_folder, "test")
+        test_input, test_output = retrieve_network_input_output(test_folder, n_if_shortened)
+        with open(os.path.join(run_folder, f"test_results.txt"), "w") as f:
+            print_to_file(f"Evaluation using a test set containing {len(test_input[0])} sequences", f)
+            results = model.evaluate(test_input, test_output, batch_size=32)
+            for n, r in zip(model.metrics_names, results):
+                print_to_file(f"{n:>13}: {r:.4f}", f)
 
     if section.endswith("multihot"):
         from RNN_attention_multihot_encoding.model_specific_utils import record_firing
