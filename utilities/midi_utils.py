@@ -1,4 +1,4 @@
-# -*- coding: future_fstrings -*-
+# Author: Piotr Kram
 import numpy as np
 from music21 import midi, instrument, chord, note, duration, pitch, stream
 import os

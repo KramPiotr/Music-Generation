@@ -1,0 +1,7 @@
+tensorflow
+keras
+pickle
+numpy
+icecream
+future_fstrings
+glob

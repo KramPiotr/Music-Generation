@@ -1,4 +1,4 @@
-# -*- coding: future_fstrings -*-
+# Author: Piotr Kram
 from utilities.midi_utils import process_midi
 from utilities.utils import retrieve_notes_and_durations, save_notes_and_durations, save_train_test_split, par_dir
 from utilities.part_utils import process_notes_and_durations

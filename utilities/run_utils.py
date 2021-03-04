@@ -1,4 +1,4 @@
-# -*- coding: future_fstrings -*-
+# Author: Piotr Kram
 import pickle as pkl
 import os
 

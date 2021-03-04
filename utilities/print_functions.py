@@ -1,4 +1,4 @@
-# -*- coding: future_fstrings -*-
+# Author: Piotr Kram
 import ast
 import sys
 import os

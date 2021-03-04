@@ -1,4 +1,4 @@
-# -*- coding: future_fstrings -*-
+# Author: Piotr Kram
 from utilities.predict import predict
 import numpy as np
 import itertools

@@ -1,4 +1,4 @@
-# -*- coding: future_fstrings -*-
+# Author: Piotr Kram
 import numpy as np
 from keras.utils import np_utils
 from tensorflow.keras.models import model_from_json, Model

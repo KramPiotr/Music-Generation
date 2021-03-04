@@ -1,4 +1,4 @@
-# -*- coding: future_fstrings -*-
+# Author: Piotr Kram
 import numpy as np
 from utilities.notes_utils import multi_hot_encoding_12_tones, notes_to_int_tuples
 from music21 import converter

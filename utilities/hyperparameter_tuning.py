@@ -1,4 +1,4 @@
-# -*- coding: future_fstrings -*-
+# Author: Piotr Kram
 from tensorflow.keras.optimizers import RMSprop, Adam
 import itertools
 from tqdm import tqdm
