@@ -135,7 +135,6 @@ output
 run
 .idea
 processed_midi/
-RNN_attention/run_id
 trials.mid
 evaluation_models/hierdec-mel_16bar.tar
 
