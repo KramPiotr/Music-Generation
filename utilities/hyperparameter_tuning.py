@@ -9,9 +9,27 @@ from utilities.run import run
 from utilities.utils import print_to_file
 import numpy as np
 from RNN_attention.model import create_network
-from datetime import date
+from datetime import date, datetime
 import random
 from functools import partial
+import signal
+import time
+
+def log_results(*args):
+    global scores, epochs, patience
+    with open(f"{log_dir}results{datetime.now().strftime('%m%d%H%M')}.txt", "w") as f:
+        print_ = partial(print_to_file, file = f)
+        print_(f"Model trained for {epochs} epochs and {patience} patience. Below scores mean the best validation losses achieved.\n")
+        scores = sorted(scores, key=lambda x: x[0])
+        for i, (score, run_id, kwargs) in enumerate(scores):
+            pos_id = f"{i+1}/{len(scores)} {run_id}"
+            print_(f'{pos_id:<28}{score}')
+            print_("Model parameters:", indent_level = 1)
+            for key, value in kwargs.items():
+                print_(f"{key:<20}{value}", indent_level = 2)
+            print_("")
+    sys.exit(1)
+
 
 dataset_and_model = "two_datasets_attention"
 
@@ -48,22 +66,22 @@ log_dir = f"..\\run\\{dataset_and_model}\\optimisation\\"
 os.makedirs(log_dir, exist_ok=True)
 
 epochs = 200
-patience = 10
+patience = 3
 
-with open(f"{log_dir}results.txt", "w") as f:
-    print_ = partial(print_to_file, file = f)
-    print_(f"Model trained for {epochs} epochs and {patience} patience. Below scores mean the best validation losses achieved.\n")
-    scores = []
-    for arg_list in tqdm(arg_values):
-        experiment_kwargs = dict(zip(model_param_space.keys(), arg_list))
-        run_id, score = run(dataset_and_model, 2, create_network, experiment_kwargs, epochs = epochs, patience = patience, descr=f"Hyperparameter training {date.today().strftime('%d/%m/%Y')}")
-        scores.append((score, run_id, experiment_kwargs))
-    scores = sorted(scores, key=lambda x: x[0])
-    for i, (score, run_id, kwargs) in enumerate(scores):
-        pos_id = f"{i+1}/{len(scores)} {run_id}"
-        print_(f'{pos_id:<28}{score}')
-        print_("Model parameters:", indent_level = 1)
-        for key, value in kwargs.items():
-            print_(f"{key:<20}{value}", indent_level = 2)
-        print_("")
+
+scores = []
+for arg_list in tqdm(arg_values):
+    experiment_kwargs = dict(zip(model_param_space.keys(), arg_list))
+    print("\nRun for parameters:")
+    for key, value in experiment_kwargs.items():
+        print(f"    {key:<20}{value}")
+    print("")
+    #run_id, score = run(dataset_and_model, 2, create_network, experiment_kwargs, epochs = epochs, patience = patience, descr=f"Hyperparameter training {date.today().strftime('%d/%m/%Y')}")
+    run_id, score = (1, 2)
+    time.sleep(1)
+    print(f"\nFinal loss achieved: {score}")
+    scores.append((score, run_id, experiment_kwargs))
+    if len(scores) == 1:
+        signal.signal(signal.SIGINT, log_results)
+log_results()
 
