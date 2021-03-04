@@ -76,10 +76,9 @@ for arg_list in tqdm(arg_values):
     for key, value in experiment_kwargs.items():
         print(f"    {key:<20}{value}")
     print("")
-    #run_id, score = run(dataset_and_model, 2, create_network, experiment_kwargs, epochs = epochs, patience = patience, descr=f"Hyperparameter training {date.today().strftime('%d/%m/%Y')}")
-    run_id, score = (1, 2)
+    run_id, score = run(dataset_and_model, 2, create_network, experiment_kwargs, epochs = epochs, patience = patience, descr=f"Hyperparameter training {date.today().strftime('%d/%m/%Y')}")
     time.sleep(1)
-    print(f"\nFinal loss achieved: {score}")
+    print(f"\nFinal loss achieved for the model with id {run_id} is: {score}")
     scores.append((score, run_id, experiment_kwargs))
     if len(scores) == 1:
         signal.signal(signal.SIGINT, log_results)
