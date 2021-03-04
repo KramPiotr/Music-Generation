@@ -1,3 +1,4 @@
+# -*- coding: future_fstrings -*-
 import os
 import tensorflow as tf
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, CSVLogger
@@ -42,6 +43,7 @@ def run(section, dataset_version, create_network, network_params = None, epochs=
 
     run_dir = os.path.join("..", "run")
     section_folder = os.path.join(run_dir, section)
+    #ic(section_folder)
     if not os.path.exists(section_folder):
         raise ValueError(f"The specified section doesn't exist in the run directory: {section_folder}")
 

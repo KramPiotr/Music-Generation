@@ -1,13 +1,16 @@
+# -*- coding: future_fstrings -*-
 from tensorflow.keras.optimizers import RMSprop, Adam
 import itertools
 from tqdm import tqdm
+import os
+import sys
+sys.path.append(os.path.dirname(os.getcwd()))
 from utilities.run import run
 from utilities.utils import print_to_file
 import numpy as np
 from RNN_attention.model import create_network
 from datetime import date
 import random
-import os
 from functools import partial
 
 dataset_and_model = "two_datasets_attention"
@@ -41,13 +44,13 @@ model_param_space = {
 arg_values = list(itertools.product(*model_param_space.values()))
 random.shuffle(arg_values)
 
-log_dir = f"../run/{dataset_and_model}/optimisation"
+log_dir = f"..\\run\\{dataset_and_model}\\optimisation\\"
 os.makedirs(log_dir, exist_ok=True)
 
 epochs = 200
 patience = 10
 
-with open(f"{log_dir}/results.txt", "w") as f:
+with open(f"{log_dir}results.txt", "w") as f:
     print_ = partial(print_to_file, file = f)
     print_(f"Model trained for {epochs} epochs and {patience} patience. Below scores mean the best validation losses achieved.\n")
     scores = []
@@ -57,7 +60,8 @@ with open(f"{log_dir}/results.txt", "w") as f:
         scores.append((score, run_id, experiment_kwargs))
     scores = sorted(scores, key=lambda x: x[0])
     for i, (score, run_id, kwargs) in enumerate(scores):
-        print_(f'{f"{i+1}/{len(scores)} {run_id}":<28}{score}')
+        pos_id = f"{i+1}/{len(scores)} {run_id}"
+        print_(f'{pos_id:<28}{score}')
         print_("Model parameters:", indent_level = 1)
         for key, value in kwargs.items():
             print_(f"{key:<20}{value}", indent_level = 2)
