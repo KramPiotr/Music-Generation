@@ -20,8 +20,11 @@ def set_run_id(store_folder, force_run_id, next_run):
     '''
     run_id_file = os.path.join(store_folder, "run_id.txt")
     if force_run_id is None:
-        with open(run_id_file, 'r') as f:
-            run_id = int(f.read())
+        if not os.path.exists(run_id_file):
+            run_id = 0
+        else:
+            with open(run_id_file, 'r') as f:
+                run_id = int(f.read())
         with open(run_id_file, 'w') as f:
             f.write(str(run_id + next_run))
     else:
