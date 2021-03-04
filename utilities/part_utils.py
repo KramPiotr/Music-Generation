@@ -1,3 +1,4 @@
+# -*- coding: future_fstrings -*-
 import os
 import pickle as pkl
 from utilities.utils import create_lookups, get_distinct, prepare_sequences, retrieve_notes_and_durations, save_notes_and_durations, save_train_test_split

@@ -1,3 +1,4 @@
+# -*- coding: future_fstrings -*-
 import numpy as np
 from tensorflow.keras.layers import LSTM, Input, Dropout, Dense, Activation, Embedding, Concatenate, Reshape, BatchNormalization
 from tensorflow.keras.layers import Flatten, RepeatVector, Permute, TimeDistributed

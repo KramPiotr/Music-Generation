@@ -1,3 +1,4 @@
+# -*- coding: future_fstrings -*-
 from utilities.predict import predict
 import numpy as np
 import itertools

@@ -1,3 +1,4 @@
+# -*- coding: future_fstrings -*-
 import numpy as np
 
 def remove_repetition(notes):
