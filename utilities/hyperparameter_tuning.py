@@ -54,7 +54,7 @@ model_param_space = {
     "n_dense": [1, 2],
     "drop1": [0.2, 0.5],
     "drop2": [0.2, 0.5],
-    "use_attention": [True, False],
+    "use_attention": [True],
     "learning_rate": [0.001],
     "optimizer": [RMSprop]
 }
