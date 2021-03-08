@@ -129,7 +129,7 @@ def run(section, dataset_version, create_network, network_params = None, epochs=
     # save_model_to_json(att_model, run_folder, name="att_model")
 
     if evaluate:
-        test_folder = os.path.join(store_model_folder, "test")
+        test_folder = os.path.join(store_model_folder, "test") #TODO test with train
         test_input, test_output = retrieve_network_input_output(test_folder, n_if_shortened)
         with open(os.path.join(run_folder, f"test_results.txt"), "w") as f:
             print_to_file(f"Evaluation using a test set containing {len(test_input[0])} sequences", f)

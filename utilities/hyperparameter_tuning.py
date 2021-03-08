@@ -72,11 +72,12 @@ patience = 3
 scores = []
 for arg_list in tqdm(arg_values):
     experiment_kwargs = dict(zip(model_param_space.keys(), arg_list))
-    print("\nRun for parameters:")
+    descr = f"Hyperparameter training {date.today().strftime('%d/%m/%Y')}\n\nRun for parameters:\n"
     for key, value in experiment_kwargs.items():
-        print(f"    {key:<20}{value}")
-    print("")
-    run_id, score = run(dataset_and_model, 2, create_network, experiment_kwargs, epochs = epochs, patience = patience, descr=f"Hyperparameter training {date.today().strftime('%d/%m/%Y')}")
+        descr += f"    {key:<20}{value}\n"
+    descr += "\n"
+    print(descr)
+    run_id, score = run(dataset_and_model, 2, create_network, experiment_kwargs, epochs = epochs, patience = patience, descr=descr)
     time.sleep(1)
     print(f"\nFinal loss achieved for the model with id {run_id} is: {score}")
     scores.append((score, run_id, experiment_kwargs))
