@@ -13,6 +13,7 @@ import ntpath
 import sys
 import re
 from glob import glob
+from pathlib import Path, PureWindowsPath
 from functools import partial
 
 def get_distinct(elements):
@@ -247,6 +248,22 @@ def par_dir(dir):
     dir = str(dir).rstrip("/").rstrip("\\")
     return os.path.dirname(dir)
 
+def change_path(path, new_root, new_subfolder, new_extension, new_name = None):
+    old_path = Path(path)
+    new_path = Path(new_root).joinpath(new_subfolder)
+    os.makedirs(new_path, exist_ok=True)
+    new_extension = new_extension if new_extension.startswith(".") else "." + new_extension
+    new_path = new_path.joinpath(old_path.name) if new_name is None else new_path.joinpath(new_name)
+    new_path = new_path.with_suffix(new_extension)
+    return new_path
+
+def test_change_path():
+    song = "utilities/example/billie_jean.mid"
+    new_root = "utilities/example/"
+    new_subfolder = "wav"
+    new_extension = "mp3"
+    print(change_path(song, new_root, new_subfolder, new_extension))
+    print(change_path(song, new_root, new_subfolder, new_extension, "new_name"))
 
 
 
@@ -256,6 +273,7 @@ def par_dir(dir):
 ## uporzadkuj code base
 
 if __name__ == "__main__":
+    test_change_path()
     pass
     # for filename in glob("../run/two_datasets_multihot/00/weights/weights-improvement*"):
     #     print(filename)

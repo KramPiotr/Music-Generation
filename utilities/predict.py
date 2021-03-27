@@ -7,7 +7,7 @@ from music21 import stream
 import sys
 import collections
 import matplotlib.pyplot as plt
-from utilities.utils import sample_with_temp, retrieve_distincts_and_lookups, retrieve_best_model, multihot_sample
+from utilities.utils import sample_with_temp, retrieve_distincts_and_lookups, retrieve_best_model#, multihot_sample
 from utilities.midi_utils import get_note, get_initialized_song, translate_chord
 from utilities.run_utils import id_to_str
 from utilities.notes_utils import multi_hot_encoding_12_tones
@@ -222,5 +222,6 @@ def predict(section, version_id, dataset_version, notes_temp, duration_temp, wei
 if __name__ == "__main__":
     np.random.seed(0)
     #predict("two_datasets_multihot", 1, 1, 1, 1) #TODO convert into unit test
-    predict("two_datasets_attention", 3, 1, 1, 1, init="cfge") #TODO convert into unit test
-    predict("two_datasets_attention", 3, 1, 1, 1, init="ttls") #TODO convert into unit test
+    #predict("two_datasets_attention", 3, 1, 1, 1, init="cfge") #TODO convert into unit test
+    predict("two_datasets_attention", 3, 1, 1, 1) #TODO convert into unit test
+    #predict("two_datasets_attention", 3, 1, 1, 1, init="ttls") #TODO convert into unit test
