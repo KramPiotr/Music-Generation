@@ -108,7 +108,7 @@ def sample_with_temp(preds, temperature):
 
 def save_notes_and_durations(store_folder, notes, durations):
     os.makedirs(store_folder, exist_ok=True)
-    print(f"Saving notes and duration sequences of length {len(notes)} to {truncate_str(store_folder, 'prefix', 20)}")
+    print(f"Saving notes and duration sequences of length {len(notes)} to {truncate_str(str(store_folder), 'prefix', 20)}")
     with open(os.path.join(store_folder, 'notes'), 'wb') as f:
         pkl.dump(notes, f)
     with open(os.path.join(store_folder, 'durations'), 'wb') as f:

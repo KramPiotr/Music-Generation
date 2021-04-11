@@ -10,19 +10,19 @@ from tqdm import tqdm
 from glob import glob
 import shutil
 
-def parse_dataset(dataset, store_dir, seq_len, raw=False): #TODO extract also notes without preprocessing
+def parse_dataset(dataset, store_dir, seq_len, raw=False, single=False): #TODO extract also notes without preprocessing
     if os.path.exists(store_dir):
         shutil.rmtree(store_dir)
-    dataset_dirs = os.listdir(dataset)
+    dataset_dirs = os.listdir(dataset) if not single else [dataset]
     n_exceptions = 0
     error_dir = -1
     for i, file in enumerate(dataset_dirs):
         if i < error_dir:
             continue
-        dir = os.path.join(dataset, file)
+        dir = os.path.join(dataset, file) if not single else file
         if os.path.isdir(dir):
             print(f"\nProcessing directory no.{i} out of {len(dataset_dirs)} files in the midi archive\n")
-            output_dir = os.path.join(store_dir, file)
+            output_dir = os.path.join(store_dir, file) if not single else store_dir
             if raw:
                 output_dir = os.path.join(output_dir, "raw")
             os.makedirs(output_dir, exist_ok=True)
@@ -112,9 +112,24 @@ def process_archive(archive_dir, merged_store_dir, dataset_dir, seq_len=32, to_m
         print("\nAnalyzing the dataset")
         analyze_dataset(dataset_dir)
 
-if __name__ == "__main__":
-    seq_len = 32
+def process_datasets():
+    seq_len=32
+    mirex_first_dir = Path("../datasets/MIREX_dataset/MIDIs")
+    mirex_processed_dir = Path("../processed_midi/MIREX")
+    print("Parsing the MIREX archive")
+    parse_dataset(mirex_first_dir, mirex_processed_dir, seq_len, single=True)
+
     archive_dir = Path("../datasets/130000_Pop_Rock_Classical_Videogame_EDM_MIDI_Archive")
-    merged_store_dir = Path("../processed_midi/MIDI_archive_part_preprocess")
-    dataset_dir = "../run/two_datasets_store/version_1"
-    process_archive(archive_dir, merged_store_dir, dataset_dir, seq_len, skip="Parsing, Merging_archive, Merging_datasets")#, Attention")
+    merged_store_dir = Path("../processed_midi/MIDI_archive")
+    dataset_dir = "../run/two_datasets_store/version_0"
+    process_archive(archive_dir, merged_store_dir, dataset_dir, seq_len, to_merge_dirs=[mirex_processed_dir])
+
+
+if __name__ == "__main__":
+    # seq_len = 32
+    # archive_dir = Path("../datasets/130000_Pop_Rock_Classical_Videogame_EDM_MIDI_Archive")
+    # merged_store_dir = Path("../processed_midi/MIDI_archive_part_preprocess")
+    # dataset_dir = "../run/two_datasets_store/version_0"
+    # process_archive(archive_dir, merged_store_dir, dataset_dir, seq_len, skip="Parsing, Merging_archive, Merging_datasets")#, Attention")
+
+    process_datasets()
