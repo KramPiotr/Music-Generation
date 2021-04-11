@@ -22,3 +22,7 @@ A repository for the machine learning part of my Part II project
    created during the first run of the ***hyperparameter_tuning.py*** file.
 
    `python ./utilities/hyperparameter_tuning.py`
+
+6. To gather the results from multiple runs in one, ***results_analysis.txt*** file you can run the ***results_analysis.py*** file.
+
+   `python ./utilities/results_analysis.py`

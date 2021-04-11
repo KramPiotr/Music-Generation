@@ -13,6 +13,19 @@ from utilities.run_utils import id_to_str
 from utilities.notes_utils import multi_hot_encoding_12_tones
 
 def predict(section, version_id, dataset_version, notes_temp, duration_temp, weights_file = None, init=None, save_with_time=True, min_extra_notes = 50, max_extra_notes=200):
+    '''
+    :param section:
+    :param version_id: run id of the model, present in the directory name of the model
+    :param dataset_version: version of the dataset you are using, present in the directory name in the store folder
+    :param notes_temp:
+    :param duration_temp:
+    :param weights_file:
+    :param init:
+    :param save_with_time:
+    :param min_extra_notes:
+    :param max_extra_notes:
+    :return:
+    '''
     #init: 'cfge' #'ttls' #None
     # run params
     #section = 'two_datasets_attention' #"MIREX_multihot"

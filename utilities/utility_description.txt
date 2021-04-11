@@ -1,9 +1,23 @@
 analyze.py
-  basic_analysis
+  get_notes_durations
+  get_distincts_lookups
+  get_notes
+  get_durations
+  basic_analysis_no_dl
+  describe_dataset
   plot_frequencies_by_pitch
   analyze_frequencies_by_group
   analyze_frequencies_by_duration
   create_processed
+  analyze_dataset
+  check_for_rests
+
+csv_analysis.py
+
+generate_database.py
+
+hyperparameter_tuning.py
+  log_results
 
 midi_utils.py
   open_midi
@@ -14,6 +28,9 @@ midi_utils.py
   translate_chord_string
   get_initialized_song
   save_song_from_notes_and_durations
+
+multiple_predict.py
+  multi_predict
 
 notes_utils.py
   remove_repetition
@@ -27,17 +44,20 @@ part_utils.py
   preprocess
   single_part_preprocess
   process_notes_and_durations
-  merge_datasets
 
 plagiarism_detection.py
   IoU
   local_alignment
   save_fragment
+  test_plagiarism
   process_plagiarism
   put_into_dirs
   remove_error_output
   process_plagiarism_for_database
   saveIoU
+
+predict.py
+  predict
 
 print_functions.py
   top_level_functions
@@ -46,6 +66,13 @@ print_functions.py
 process_midi_archive.py
   parse_dataset
   merge_data
+  merge_datasets
+  get_dataset_version_dir
+  to_skip
+  process_archive
+  process_datasets
+
+results_analysis.py
 
 run.py
   run
@@ -58,8 +85,10 @@ utils.py
   get_distinct
   create_lookups
   prepare_sequences
+  find_interpolated
   sample_with_temp
   save_notes_and_durations
+  retrieve
   retrieve_distincts_and_lookups
   retrieve_notes_and_durations
   retrieve_network_input_output
@@ -70,4 +99,14 @@ utils.py
   save_train_test_split
   print_to_file
   truncate_str
+  save_model_to_json
+  retrieve_model_from_json
+  retrieve_attention_model
+  retrieve_best_model
+  print_dict
+  visualize_model
+  save_fig
+  par_dir
+  change_path
+  test_change_path
 

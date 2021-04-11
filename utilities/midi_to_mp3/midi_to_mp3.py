@@ -1,12 +1,6 @@
-from midi2audio import FluidSynth
 from utilities.utils import change_path
 from pathlib import Path
-import pyaudio  # audio recording
-import wave  # file saving
-import pygame  # midi playback
-import fnmatch  # name matching
 import os  # file listing
-from icecream import ic
 import subprocess
 from glob import glob
 from tqdm import tqdm
