@@ -152,7 +152,7 @@ def run(section, dataset_version, create_network, network_params = None, epochs=
 
 if __name__ == "__main__":
     from RNN_attention.model import create_network
-    run("two_datasets_attention", 1, create_network, patience=1, trial_run=True, force_run_id=99, descr="Trial run")
+    run("two_datasets_attention", 0, create_network, patience=1, trial_run=True, force_run_id=99, descr="Trial run")
 
     # network_params = {
     #     "seq_len": 32,

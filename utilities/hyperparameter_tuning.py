@@ -77,7 +77,7 @@ for arg_list in tqdm(arg_values):
         descr += f"    {key:<20}{value}\n"
     descr += "\n"
     print(descr)
-    run_id, score = run(dataset_and_model, 2, create_network, experiment_kwargs, epochs = epochs, patience = patience, descr=descr)
+    run_id, score = run(dataset_and_model, 0, create_network, experiment_kwargs, epochs = epochs, patience = patience, descr=descr)
     time.sleep(1)
     print(f"\nFinal loss achieved for the model with id {run_id} is: {score}")
     scores.append((score, run_id, experiment_kwargs))
