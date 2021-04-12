@@ -12,7 +12,7 @@ from utilities.midi_utils import get_note, get_initialized_song, translate_chord
 from utilities.run_utils import id_to_str
 from utilities.notes_utils import multi_hot_encoding_12_tones
 
-def predict(section, version_id, dataset_version, notes_temp, duration_temp, weights_file = None, init=None, save_with_time=True, min_extra_notes = 50, max_extra_notes=200):
+def predict(section, version_id, dataset_version, notes_temp, duration_temp, dataset_dir=None, weights_file = None, init=None, save_with_time=True, min_extra_notes = 50, max_extra_notes=200):
     '''
     :param section:
     :param version_id: run id of the model, present in the directory name of the model
@@ -33,18 +33,18 @@ def predict(section, version_id, dataset_version, notes_temp, duration_temp, wei
     if not os.path.exists(section_folder):
         raise ValueError(f"The specified section doesn't exist in the run directory: {section_folder}")
 
-    model_folder = os.path.join(section_folder, id_to_str(version_id))
+    model_folder = os.path.join(section_folder, id_to_str(version_id)) #../run/{section}/{id}
     if not os.path.exists(model_folder):
         raise ValueError(f"The specified model version is invalid: {version_id}")
 
-    compose_folder = os.path.join(model_folder, "compose")
+    compose_folder = os.path.join(model_folder, "compose") #../run/{section}/{id}/compose
 
-    store_folder = os.path.join(section_folder, "store")
+    store_folder = dataset_dir if dataset_dir is not None else os.path.join(section_folder, "store") #../run/{section}/store
     if not os.path.exists(store_folder):
         store = "_".join(section.split("_")[:-1]) + "_store"
-        store_folder = os.path.join("../run", store)
+        store_folder = os.path.join("../run", store) #../run/two_datasets_store
 
-    store_folder = os.path.join(store_folder, f"version_{dataset_version}")
+    store_folder = os.path.join(store_folder, f"version_{dataset_version}") #../run/({section}/store|..._store)/version_{id}
     if section.endswith("multihot"):
         _, (duration_to_int, int_to_duration) = retrieve_distincts_and_lookups(store_folder)
     else:

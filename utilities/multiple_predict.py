@@ -4,6 +4,7 @@ import numpy as np
 import itertools
 from tqdm import tqdm
 
+
 def multi_predict(predict_params, experiment_params=None):
     if experiment_params is None:
         experiment_params = {}
@@ -17,11 +18,28 @@ def multi_predict(predict_params, experiment_params=None):
         experiment_kwargs = {key: arg_list[i] for i, key in enumerate(experiment_params.keys())}
         predict(**predict_params, **experiment_kwargs)
 
-if __name__ == "__main__":
-    #np.random.seed(0)
+
+def generate_multihot():
+    # np.random.seed(0)
     predict_params = {
         'section': "two_datasets_multihot",
         'version_id': 1,
         'dataset_version': 1,
     }
     multi_predict(predict_params)
+
+
+def generate_attention_hpc():
+    # np.random.seed(0)
+    predict_params = {
+        'section': "two_datasets_attention_hpc",
+        'version_id': 21,
+        'dataset_dir': "../run/two_datasets_attention/store",
+        'dataset_version': 2,
+    }
+    multi_predict(predict_params)
+
+
+if __name__ == "__main__":
+    # np.random.seed(0)
+    generate_attention_hpc()

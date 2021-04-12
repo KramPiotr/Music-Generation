@@ -1,4 +1,4 @@
-# Author: Piotr Kram
+    # Author: Piotr Kram
 import os
 import tensorflow as tf
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, CSVLogger
@@ -125,6 +125,8 @@ def run(section, dataset_version, create_network, network_params = None, epochs=
               shuffle=True,
              )
     model.save_weights(os.path.join(weights_folder, "weights.h5"))
+    model.save(os.path.join(run_folder, "final_model"))
+
     save_model_to_json(model, run_folder)
     # save_model_to_json(att_model, run_folder, name="att_model")
 
