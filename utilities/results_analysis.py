@@ -32,5 +32,9 @@ def analyse_attention_models():
     results_database = "..\\run\\two_datasets_attention"
     analyse_results(results_database)
 
+def analyse_multihot_models():
+    results_database = "..\\run\\two_datasets_multihot"
+    analyse_results(results_database)
+
 if __name__ == "__main__":
-    analyse_attention_models()
+    analyse_multihot_models()

@@ -8,6 +8,7 @@ import os
 import pickle as pkl
 # print(os.getcwd())
 import sys
+import shutil
 
 sys.path.append(os.path.dirname(os.getcwd()))
 from utilities.notes_utils import multi_hot_encoding_12_tones
@@ -17,6 +18,8 @@ import re
 from glob import glob
 from pathlib import Path, PureWindowsPath
 from functools import partial
+import RNN_attention.model  # helps with retrieving the model
+import RNN_attention_multihot_encoding.model  # helps with retrieving the model
 
 
 def get_distinct(elements):
@@ -93,14 +96,15 @@ def find_interpolated(val, arr, out_arr):
 #     random_tresholds = firing_tresholds + add_random * np.random.normal(0, temperature * firing_tresholds, len(preds))
 #     return (preds >= random_tresholds).astype(int)
 
-# def multihot_sample(preds, temperature, firing_loc):
-#     firing_tresholds = np.array(retrieve(firing_loc, "firing_tresholds"))
-#     firing_fractions = np.array(retrieve(firing_loc, "firing_fractions"))
-#     fraction = np.random.uniform(0, 1, len(preds)) >= firing_fractions
-#     is_on = preds >= firing_tresholds
-#     add_random = ~is_on^fraction # in other words nxor: (is_on and fraction) or (not is_on and not fraction)
-#     random_tresholds = firing_tresholds + add_random * np.random.normal(0, temperature * firing_tresholds, len(preds))
-#     return (preds >= random_tresholds).astype(int)
+def multihot_sample(preds, temperature, firing_loc):  # later implement different variants
+    firing_tresholds = np.array(retrieve(firing_loc, "firing_tresholds"))
+    firing_fractions = np.array(retrieve(firing_loc, "firing_fractions"))
+    fraction = np.random.uniform(0, 1, len(preds)) >= firing_fractions
+    is_on = preds >= firing_tresholds
+    add_random = ~is_on ^ fraction  # in other words nxor: (is_on and fraction) or (not is_on and not fraction)
+    random_tresholds = firing_tresholds + add_random * np.random.normal(0, temperature * firing_tresholds, len(preds))
+    return (preds >= random_tresholds).astype(int)
+
 
 def sample_with_temp(preds, temperature):
     if temperature == 0:
@@ -229,13 +233,15 @@ def save_model_to_json(model, dir, name="model"):
 
 def retrieve_final_model(dir):
     model_dir = os.path.join(dir, "final_model")
-    return None if not os.path.exists(model_dir) else keras.models.load_model("my_model")
+    return keras.models.load_model(model_dir) if os.path.exists(model_dir) else None
 
 
-def retrieve_model_from_json(dir, name="model"):
-    import RNN_attention.model
+def retrieve_model_from_json(dir, name="model", custom_objects=None):
     with open(os.path.join(dir, name + ".json"), "r") as f:
-        return model_from_json(f.read())
+        if custom_objects is None:
+            return model_from_json(f.read())
+        else:
+            return model_from_json(f.read(), custom_objects)
 
 
 def retrieve_attention_model(model):
@@ -246,11 +252,11 @@ def retrieve_attention_model(model):
         return None
 
 
-def retrieve_best_model(dir, weights_file=None):
+def retrieve_best_model(dir, weights_file=None, lambdas=None):
     final_model = retrieve_final_model(dir)
-    model = final_model if final_model is not None else retrieve_model_from_json(dir)
-    weights_file = glob(os.path.join(os.path.join(dir, "weights"), "weights-improvement*"))[
-        -1] if weights_file is None else os.path.join(os.path.join(dir, "weights"), weights_file)
+    model = final_model if final_model is not None else retrieve_model_from_json(dir, custom_objects=lambdas)
+    weights_file = glob(os.path.join(os.path.join(dir, "weights"), "weights-improvement*"))[-1] \
+        if weights_file is None else os.path.join(os.path.join(dir, "weights"), weights_file)
     if not os.path.exists(weights_file):
         raise ValueError(f"Invalid name of the weights file: {weights_file}")
     model.load_weights(weights_file)
@@ -301,15 +307,28 @@ def test_change_path():
     print(change_path(song, new_root, new_subfolder, new_extension))
     print(change_path(song, new_root, new_subfolder, new_extension, "new_name"))
 
+def draw_representatives(db, n = 10):
+    elements = np.array(glob(os.path.join(db, "*")))
+    if len(elements) < n:
+        raise Exception(f"There is not enough elements in the database: {db}")
+    repr_dir = os.path.join(db, "representatives")
+    os.makedirs(repr_dir, exist_ok=True)
+    np.random.shuffle(elements)
+    representatives = elements[:n]
+    for repr_path in representatives:
+        new_path = os.path.join(repr_dir, ntpath.basename(repr_path))
+        shutil.copyfile(repr_path, new_path)
 
 ##TODO Question how to sample with temperature from multihot encoding, przygotuj inne pytania na spotkanie
 
 ## Zrob jakies unit tests, np czy durations z rests sie zgadzaja
 ## uporzadkuj code base
 
+def draw_evaluation_model_representatives(model = "random_generator"):
+    draw_representatives(f"../evaluation_models/compose/{model}/mp3")
+
 if __name__ == "__main__":
-    test_change_path()
-    pass
+    draw_evaluation_model_representatives()
     # for filename in glob("../run/two_datasets_multihot/00/weights/weights-improvement*"):
     #     print(filename)
     # describe_dataset("../run/two_datasets_attention/store/version_0")

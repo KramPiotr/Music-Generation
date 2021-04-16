@@ -8,3 +8,5 @@ scikit_learn
 tensorboard
 tensorflow
 tqdm
+seaborn
+magenta

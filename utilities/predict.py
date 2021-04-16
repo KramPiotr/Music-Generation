@@ -7,12 +7,16 @@ from music21 import stream
 import sys
 import collections
 import matplotlib.pyplot as plt
-from utilities.utils import sample_with_temp, retrieve_distincts_and_lookups, retrieve_best_model#, multihot_sample
+from tensorflow.keras.layers import Lambda
+import tensorflow.keras.backend as K
+from utilities.utils import sample_with_temp, retrieve_distincts_and_lookups, retrieve_best_model, multihot_sample
 from utilities.midi_utils import get_note, get_initialized_song, translate_chord
 from utilities.run_utils import id_to_str
 from utilities.notes_utils import multi_hot_encoding_12_tones
 
-def predict(section, version_id, dataset_version, notes_temp, duration_temp, dataset_dir=None, weights_file = None, init=None, save_with_time=True, min_extra_notes = 50, max_extra_notes=200):
+
+def predict(section, version_id, dataset_version, notes_temp, duration_temp, dataset_dir=None, weights_file=None,
+            init=None, save_with_time=True, min_extra_notes=50, max_extra_notes=200, model_lambdas=None):
     '''
     :param section:
     :param version_id: run id of the model, present in the directory name of the model
@@ -26,37 +30,39 @@ def predict(section, version_id, dataset_version, notes_temp, duration_temp, dat
     :param max_extra_notes:
     :return:
     '''
-    #init: 'cfge' #'ttls' #None
+    # init: 'cfge' #'ttls' #None
     # run params
-    #section = 'two_datasets_attention' #"MIREX_multihot"
+    # section = 'two_datasets_attention' #"MIREX_multihot"
+    att = section.endswith("attention") or section.endswith("attention_hpc")
     section_folder = f"../run/{section}/"
     if not os.path.exists(section_folder):
         raise ValueError(f"The specified section doesn't exist in the run directory: {section_folder}")
 
-    model_folder = os.path.join(section_folder, id_to_str(version_id)) #../run/{section}/{id}
+    model_folder = os.path.join(section_folder, id_to_str(version_id))  # ../run/{section}/{id}
     if not os.path.exists(model_folder):
         raise ValueError(f"The specified model version is invalid: {version_id}")
 
-    compose_folder = os.path.join(model_folder, "compose") #../run/{section}/{id}/compose
+    compose_folder = os.path.join(model_folder, "compose")  # ../run/{section}/{id}/compose
 
-    store_folder = dataset_dir if dataset_dir is not None else os.path.join(section_folder, "store") #../run/{section}/store
-    if not os.path.exists(store_folder):
+    store_folder = dataset_dir if dataset_dir is not None else os.path.join(section_folder,
+                                                                            "store")  # ../run/{section}/store
+    if not att:
         store = "_".join(section.split("_")[:-1]) + "_store"
-        store_folder = os.path.join("../run", store) #../run/two_datasets_store
+        store_folder = os.path.join("../run", store)  # ../run/two_datasets_store
 
-    store_folder = os.path.join(store_folder, f"version_{dataset_version}") #../run/({section}/store|..._store)/version_{id}
+    store_folder = os.path.join(store_folder,
+                                f"version_{dataset_version}")  # ../run/({section}/store|..._store)/version_{id}
     if section.endswith("multihot"):
         _, (duration_to_int, int_to_duration) = retrieve_distincts_and_lookups(store_folder)
     else:
         _, (note_to_int, int_to_note, duration_to_int, int_to_duration) = retrieve_distincts_and_lookups(store_folder)
 
-    att_model, model, weights_file = retrieve_best_model(model_folder, weights_file=weights_file)
+    att_model, model, weights_file = retrieve_best_model(model_folder, weights_file=weights_file,
+                                                         lambdas=model_lambdas)
 
     use_attention = att_model is not None
 
     seq_len = 32
-
-    att = section.endswith("attention")
 
     # Customize the starting point
     notes, durations = get_initialized_song(init, att)
@@ -67,7 +73,7 @@ def predict(section, version_id, dataset_version, notes_temp, duration_temp, dat
 
     sequence_length = len(notes)
 
-    #Generate notes
+    # Generate notes
 
     prediction_output = []
     notes_input_sequence = [note_to_int[n] for n in notes] if att else list(multi_hot_encoding_12_tones(notes))
@@ -75,16 +81,15 @@ def predict(section, version_id, dataset_version, notes_temp, duration_temp, dat
 
     overall_preds = []
 
+    # for n, d in zip(notes, durations):
+    #     if (n != 'S' and att):
+    #         prediction_output.append(get_note(n, d, True))
+    #         # overall_preds.append(n) isn't in a probabilistic form
+    #     if (d != 0 and not att):
+    #         prediction_output.append(get_note(n, d, False, treshold=0))
+    #         # overall_preds.append(n) isn't in a probabilistic form
 
-    for n, d in zip(notes, durations):
-        if (n != 'S' and att):
-            prediction_output.append(get_note(n, d, True))
-            #overall_preds.append(n) isn't in a probabilistic form
-        if (d != 0 and not att):
-            prediction_output.append(get_note(n, d, False, treshold=0))
-            #overall_preds.append(n) isn't in a probabilistic form
-
-    #Attention matrix
+    # Attention matrix
 
     att_matrix = np.zeros(shape=(max_extra_notes + sequence_length, max_extra_notes))
 
@@ -94,14 +99,14 @@ def predict(section, version_id, dataset_version, notes_temp, duration_temp, dat
     for note_index in range(max_extra_notes):
 
         prediction_input = [
-              np.array([notes_input_sequence])
+            np.array([notes_input_sequence])
             , np.array([durations_input_sequence])
         ]
         if not att:
             prediction_input[0] = prediction_input[0].astype('int')
 
         notes_prediction, durations_prediction = model.predict(prediction_input, verbose=0)
-        #notes_prediction2, durations_prediction2 = model2.predict(prediction_input, verbose=0)
+        # notes_prediction2, durations_prediction2 = model2.predict(prediction_input, verbose=0)
         if use_attention:
             att_prediction = att_model.predict(prediction_input, verbose=0)[0]
             att_matrix[(note_index - len(att_prediction) + sequence_length):(note_index + sequence_length),
@@ -115,7 +120,10 @@ def predict(section, version_id, dataset_version, notes_temp, duration_temp, dat
             else:
                 durations_prediction[0][duration_to_int[0]] = 0
 
-        n = sample_with_temp(notes_prediction[0], notes_temp) if att else multihot_sample(notes_prediction[0], notes_temp, os.path.join(model_folder, "firing"))
+        n = sample_with_temp(notes_prediction[0], notes_temp) if att else multihot_sample(notes_prediction[0],
+                                                                                          notes_temp,
+                                                                                          os.path.join(model_folder,
+                                                                                                       "firing"))
         d = sample_with_temp(durations_prediction[0], duration_temp)
 
         note = int_to_note[n] if att else translate_chord(np.where(n == 1)[0], ".")
@@ -140,8 +148,7 @@ def predict(section, version_id, dataset_version, notes_temp, duration_temp, dat
 
     # prediction_output = [p for p in prediction_output if p != -1]  probably unnecessary
 
-    #convert the output from the prediction to notes and create a midi file from the notes
-
+    # convert the output from the prediction to notes and create a midi file from the notes
 
     midi_stream = stream.Stream()
 
@@ -151,7 +158,8 @@ def predict(section, version_id, dataset_version, notes_temp, duration_temp, dat
         midi_stream.append(note)
 
     timestr = "-" + time.strftime("%Y_%m_%d--%H_%M_%S") if save_with_time else ""
-    output_folder = os.path.join(compose_folder, f"output{timestr}-{str(init)}-{notes_temp}-{duration_temp}-{weights_file}")
+    output_folder = os.path.join(compose_folder,
+                                 f"output{timestr}-{str(init)}-{notes_temp}-{duration_temp}-{weights_file}")
     os.makedirs(output_folder, exist_ok=True)
     midi_stream.write('midi', fp=os.path.join(output_folder, f'output_init_{init}.mid'))
     with open(os.path.join(output_folder, f"analysis.txt"), "w") as f:
@@ -168,8 +176,8 @@ def predict(section, version_id, dataset_version, notes_temp, duration_temp, dat
             print(f"{n:<30}{d}")
         print("\nAnalysis\n")
         print("Notes\n")
-        #note_predictions = np.array(note_predictions)
-        #duration_predictions = np.array(duration_predictions)
+        # note_predictions = np.array(note_predictions)
+        # duration_predictions = np.array(duration_predictions)
         for n, occ in collections.Counter(note_predictions).most_common():
             print(f"{n:<30}{occ}")
         print("\nDurations\n")
@@ -178,30 +186,30 @@ def predict(section, version_id, dataset_version, notes_temp, duration_temp, dat
         sys.stdout = original_stdout
 
     # Plots
+    if att:  # later you can adopt the plot to use multihot
+        overall_preds = np.transpose(np.array(overall_preds))
+        overall_preds[overall_preds < 1 / 480] = 0
+        print(f'Generated sequence of {len(prediction_output)} notes')
 
-    overall_preds = np.transpose(np.array(overall_preds))
-    overall_preds[overall_preds < 1/480] = 0
-    print(f'Generated sequence of {len(prediction_output)} notes')
+        plt.matshow(np.log(overall_preds))
+        # plt.matshow(np.log(overall_preds[:, 40:60]))
 
-    plt.matshow(np.log(overall_preds))
-    #plt.matshow(np.log(overall_preds[:, 40:60]))
+        cb_ticks = np.linspace(overall_preds.min(), overall_preds.max(), 10)
+        cbar = plt.colorbar(ticks=np.log(cb_ticks), extend='both')
+        cbar.ax.set_yticklabels(cb_ticks)
 
-    cb_ticks = np.linspace(overall_preds.min(), overall_preds.max(), 10)
-    cbar = plt.colorbar(ticks=np.log(cb_ticks), extend='both')
-    cbar.ax.set_yticklabels(cb_ticks)
+        tick_candidates = np.sort(np.sum(overall_preds, axis=-1).argsort()[-100:])
+        ticks = [tick_candidates[0]]
+        for i in range(1, len(tick_candidates)):
+            if tick_candidates[i] - ticks[-1] <= 5:
+                continue
+            else:
+                ticks.append(tick_candidates[i])
 
-    tick_candidates = np.sort(np.sum(overall_preds, axis=-1).argsort()[-100:])
-    ticks = [tick_candidates[0]]
-    for i in range(1, len(tick_candidates)):
-        if tick_candidates[i] - ticks[-1] <= 5:
-            continue
-        else:
-            ticks.append(tick_candidates[i])
-
-    labels = [int_to_note[t] for t in ticks]
-    plt.yticks(ticks, labels)
-    plt.title("Predictions visualized")
-    plt.savefig(os.path.join(output_folder, "predictions.pdf"))
+        labels = [int_to_note[t] for t in ticks]
+        plt.yticks(ticks, labels)
+        plt.title("Predictions visualized")
+        plt.savefig(os.path.join(output_folder, "predictions.pdf"))
 
     # ## attention plot
     # if use_attention:
@@ -232,9 +240,57 @@ def predict(section, version_id, dataset_version, notes_temp, duration_temp, dat
     #
     #     plt.show()
 
+
+def predict_multihot_without_saved_model():
+    custom_lambda = Lambda(lambda xin: K.sum(xin, axis=1), output_shape=(256,))
+    model_lambdas = {
+        "Lambda": custom_lambda
+    }
+    predict(section="two_datasets_multihot", version_id=1,
+            dataset_version=1, notes_temp=1, duration_temp=1, dataset_dir="../run/two_datasets_attention/store",
+            init=None, model_lambdas=model_lambdas)
+
+
+def predict_multihot():
+    predict(section="two_datasets_multihot", version_id=8,
+            dataset_version=3, notes_temp=0.25, duration_temp=0.25, dataset_dir="../run/two_datasets_attention/store",
+            init='ttls')
+
+    predict(section="two_datasets_multihot", version_id=8,
+            dataset_version=3, notes_temp=1, duration_temp=1, dataset_dir="../run/two_datasets_attention/store",
+            init='ttls')
+
+    predict(section="two_datasets_multihot", version_id=8,
+            dataset_version=3, notes_temp=2, duration_temp=2, dataset_dir="../run/two_datasets_attention/store",
+            init='ttls')
+
+    predict(section="two_datasets_multihot", version_id=8,
+            dataset_version=3, notes_temp=4, duration_temp=4, dataset_dir="../run/two_datasets_attention/store",
+            init='ttls')
+
+    predict(section="two_datasets_multihot", version_id=8,
+            dataset_version=3, notes_temp=2, duration_temp=2, dataset_dir="../run/two_datasets_attention/store",
+            init=None)
+
+    predict(section="two_datasets_multihot", version_id=8,
+            dataset_version=3, notes_temp=4, duration_temp=4, dataset_dir="../run/two_datasets_attention/store",
+            init=None)
+
+
+
+
+def predict_attention_hpc():
+    predict(section="two_datasets_attention_hpc", version_id=21,
+            dataset_version=2, notes_temp=1, duration_temp=1, dataset_dir="../run/two_datasets_attention/store",
+            init='cfge')
+
+
 if __name__ == "__main__":
-    np.random.seed(0)
-    #predict("two_datasets_multihot", 1, 1, 1, 1) #TODO convert into unit test
-    #predict("two_datasets_attention", 3, 1, 1, 1, init="cfge") #TODO convert into unit test
-    predict("two_datasets_attention", 3, 1, 1, 1) #TODO convert into unit test
-    #predict("two_datasets_attention", 3, 1, 1, 1, init="ttls") #TODO convert into unit test
+    np.random.seed(0)  # comment when not debugging
+    # predict_attention_hpc()
+    predict_multihot()
+    # predict("two_datasets_multihot", 1, 1, 1, 1) #TODO convert into unit test
+    # predict("two_datasets_attention", 3, 1, 1, 1, init="cfge") #TODO convert into unit test
+    # predict("two_datasets_attention", 3, 2, 1, 1) #TODO convert into unit test
+    # predict(section = "two_datasets_attention_hpc", version_id = 21, 2, 1, 1) #TODO convert into unit test
+    # predict("two_datasets_attention", 3, 1, 1, 1, init="ttls") #TODO convert into unit test

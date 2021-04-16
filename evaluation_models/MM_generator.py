@@ -4,10 +4,11 @@ from utilities.midi_utils import save_song_from_notes_and_durations
 import numpy as np
 import os
 import itertools
+import time
 np.random.seed(0)
-length = 50
+length = 200
 
-two_datasets_path = Path("..\\run\\two_datasets_attention\\store")
+two_datasets_path = Path("..\\run\\two_datasets_attention\\store\\version_3")
 
 notes, durations = retrieve_notes_and_durations(two_datasets_path)
 (note_names, n_notes, duration_names, n_durations), lookups = retrieve_distincts_and_lookups(two_datasets_path)
@@ -52,5 +53,5 @@ for i in range(50):
         generated_notes.append(state[0])
         generated_durations.append(state[1])
 
-    song_path = os.path.join(compose_path, f"output{i}.midi")
+    song_path = os.path.join(compose_path, f"output{time.strftime('%Y_%m_%d--%H_%M_%S')}_{i}.midi")
     save_song_from_notes_and_durations(generated_notes, generated_durations, "str", song_path)

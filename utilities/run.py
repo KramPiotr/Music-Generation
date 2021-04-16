@@ -1,12 +1,15 @@
-    # Author: Piotr Kram
+# Author: Piotr Kram
 import os
 import tensorflow as tf
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, CSVLogger
 from utilities.run_utils import set_run_id
 from utilities.utils import get_distinct, retrieve, retrieve_network_input_output, print_to_file, save_model_to_json
 import shutil
+import numpy as np
 
-def run(section, dataset_version, create_network, network_params = None, epochs=100, patience=10, evaluate=True, generate=True, force_run_id=None, next_run=True, trial_run=False, descr=None):
+
+def run(section, dataset_version, create_network, network_params=None, epochs=100, patience=10, evaluate=True,
+        generate=True, force_run_id=None, next_run=True, trial_run=False, descr=None):
     '''
     Run the model
 
@@ -26,8 +29,8 @@ def run(section, dataset_version, create_network, network_params = None, epochs=
     :param descr: short description of the model
     :return:
     '''
-    #force_run_id = 'reset1' #None #Integer #'reset' #'resetX'
-    #next_run = True
+    # force_run_id = 'reset1' #None #Integer #'reset' #'resetX'
+    # next_run = True
     n_if_shortened = 100 if trial_run else None
     if network_params is None:
         network_params = {}
@@ -38,12 +41,12 @@ def run(section, dataset_version, create_network, network_params = None, epochs=
     # use_attention = True
 
     # run params
-    #section = 'two_datasets_attention'
-    #dataset_version = 1
+    # section = 'two_datasets_attention'
+    # dataset_version = 1
 
     run_dir = os.path.join("..", "run")
     section_folder = os.path.join(run_dir, section)
-    #ic(section_folder)
+    # ic(section_folder)
     if not os.path.exists(section_folder):
         raise ValueError(f"The specified section doesn't exist in the run directory: {section_folder}")
 
@@ -78,10 +81,11 @@ def run(section, dataset_version, create_network, network_params = None, epochs=
 
     train_folder = os.path.join(store_model_folder, "train")
     network_input, network_output = retrieve_network_input_output(train_folder, n_if_shortened)
+    #network_input[1] = np.expand_dims(network_input[1], axis=2)
 
     model, att_model = create_network(n_notes, n_durations, **network_params)
     model.summary()
-    with open(os.path.join(run_folder, "model.txt"),'w') as f:
+    with open(os.path.join(run_folder, "model.txt"), 'w') as f:
         model.summary(print_fn=lambda x: f.write(x + '\n'))
 
     checkpoint1 = ModelCheckpoint(
@@ -103,7 +107,7 @@ def run(section, dataset_version, create_network, network_params = None, epochs=
     early_stopping = EarlyStopping(
         monitor='val_loss',
         restore_best_weights=True,
-        patience = patience
+        patience=patience
     )
 
     tensorboard = tf.keras.callbacks.TensorBoard(log_dir=os.path.join(run_folder, "logs"), histogram_freq=1),
@@ -116,14 +120,14 @@ def run(section, dataset_version, create_network, network_params = None, epochs=
         early_stopping,
         tensorboard,
         csv_logger,
-     ]
+    ]
 
     history_callback = model.fit(network_input, network_output,
-              epochs=epochs, batch_size=32,
-              validation_split = 0.2,
-              callbacks=callbacks_list,
-              shuffle=True,
-             )
+                                 epochs=epochs, batch_size=32,
+                                 validation_split=0.2,
+                                 callbacks=callbacks_list,
+                                 shuffle=True,
+                                 )
     model.save_weights(os.path.join(weights_folder, "weights.h5"))
     model.save(os.path.join(run_folder, "final_model"))
 
@@ -131,7 +135,7 @@ def run(section, dataset_version, create_network, network_params = None, epochs=
     # save_model_to_json(att_model, run_folder, name="att_model")
 
     if evaluate:
-        test_folder = os.path.join(store_model_folder, "test") #TODO test with train
+        test_folder = os.path.join(store_model_folder, "test")  # TODO test with train
         test_input, test_output = retrieve_network_input_output(test_folder, n_if_shortened)
         with open(os.path.join(run_folder, f"test_results.txt"), "w") as f:
             print_to_file(f"Evaluation using a test set containing {len(test_input[0])} sequences", f)
@@ -139,34 +143,22 @@ def run(section, dataset_version, create_network, network_params = None, epochs=
             for n, r in zip(model.metrics_names, results):
                 print_to_file(f"{n:>13}: {r:.4f}", f)
 
-    if section.endswith("multihot"):
-        from RNN_attention_multihot_encoding.model_specific_utils import record_firing
-        record_firing(run_folder, os.path.join(store_model_folder, "test"), test=trial_run)
+    # if section.endswith("multihot"):
+    #     from RNN_attention_multihot_encoding.model_specific_utils import record_firing
+    #     record_firing(run_folder, os.path.join(store_model_folder, "test"), test=trial_run)
 
     if generate:
-        #TODO predict
+        # TODO predict
         pass
 
     return (run_id, min(history_callback.history['val_loss']))
 
+    # TODO test the model and save to the file, maybe connect to 'predict' as well
 
-#TODO test the model and save to the file, maybe connect to 'predict' as well
 
-if __name__ == "__main__":
+def run_trial_attention():
     from RNN_attention.model import create_network
     run("two_datasets_attention", 0, create_network, patience=1, trial_run=True, force_run_id=99, descr="Trial run")
-
-    # network_params = {
-    #     "seq_len": 32,
-    #     "embed_size": 100,
-    #     "rnn_units": 256,
-    #     "use_attention": True,
-    # }
-    # from RNN_attention_multihot_encoding.model import create_network
-    #
-    # run("two_datasets_multihot", 1, create_network, network_params, trial_run=True, descr="Trial, safe to delete")
-    # run("two_datasets_multihot", 1, create_network, network_params, descr="Full model trained with the additional Dense layer")
-
     # network_params = {
     #     "embed_size": 100,
     #     "rnn_units": 256,
@@ -175,3 +167,30 @@ if __name__ == "__main__":
     # }
     # from RNN_attention.model import create_network
     # run("two_datasets_attention", 1, create_network, network_params, force_run_id='reset4', next_run=True, descr="Full model trained with the additional Dense layer")
+
+def run_attention():
+    from RNN_attention.model import create_network
+    run("two_datasets_attention", 3, create_network, descr="Full run with default parameters")
+
+
+def run_trial_multihot():
+    network_params = {
+        "seq_len": 32,
+        "embed_size": 100,
+        "rnn_units": 256,
+        "use_attention": True,
+    }
+    from RNN_attention_multihot_encoding.model import create_network
+
+    run(section="two_datasets_multihot", dataset_version=3, create_network=create_network,
+        network_params=network_params, force_run_id=99, trial_run=True, descr="Trial, safe to delete")
+    # run("two_datasets_multihot", 1, create_network, network_params, descr="Full model trained with the additional Dense layer")
+
+def run_multihot():
+    from RNN_attention_multihot_encoding.model import create_network
+
+    run(section="two_datasets_multihot", dataset_version=3, create_network=create_network,
+        descr="Full run for default parameters")
+
+if __name__ == "__main__":
+    run_multihot()

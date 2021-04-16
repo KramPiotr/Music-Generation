@@ -6,7 +6,7 @@ import os
 
 length = 50
 
-two_datasets_path = Path("..\\run\\two_datasets_attention\\store")
+two_datasets_path = Path("..\\run\\two_datasets_attention\\store\\version_3")
 _, lookups = retrieve_distincts_and_lookups(two_datasets_path)
 _, int_to_note, _, int_to_duration = lookups
 
