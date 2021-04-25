@@ -85,7 +85,7 @@ def generate_attention_hpc():
         'section': "two_datasets_attention_hpc",
         'version_id': 21,
         'dataset_dir': "../run/two_datasets_attention/store",
-        'dataset_version': 2,
+        'dataset_version': 3,
     }
     experiment_params = {
         'init': [None, 'cfge', 'ttls'],

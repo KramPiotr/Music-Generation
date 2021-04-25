@@ -46,7 +46,7 @@ def log_results(*args):
 #     "optimizer": [RMSprop]
 # }
 
-dataset_and_model = "two_datasets_multihot"
+dataset_and_model = "two_datasets_attention"
 
 model_param_space = {
     "embed_size":  [3],

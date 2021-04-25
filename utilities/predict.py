@@ -247,48 +247,29 @@ def predict_multihot_without_saved_model():
         "Lambda": custom_lambda
     }
     predict(section="two_datasets_multihot", version_id=1,
-            dataset_version=1, notes_temp=1, duration_temp=1, dataset_dir="../run/two_datasets_attention/store",
+            dataset_version=1, notes_temp=1, duration_temp=1,
             init=None, model_lambdas=model_lambdas)
 
 
 def predict_multihot():
-    predict(section="two_datasets_multihot", version_id=8,
-            dataset_version=3, notes_temp=0.25, duration_temp=0.25, dataset_dir="../run/two_datasets_attention/store",
-            init='ttls')
-
-    predict(section="two_datasets_multihot", version_id=8,
-            dataset_version=3, notes_temp=1, duration_temp=1, dataset_dir="../run/two_datasets_attention/store",
-            init='ttls')
-
-    predict(section="two_datasets_multihot", version_id=8,
-            dataset_version=3, notes_temp=2, duration_temp=2, dataset_dir="../run/two_datasets_attention/store",
-            init='ttls')
-
-    predict(section="two_datasets_multihot", version_id=8,
-            dataset_version=3, notes_temp=4, duration_temp=4, dataset_dir="../run/two_datasets_attention/store",
-            init='ttls')
-
-    predict(section="two_datasets_multihot", version_id=8,
-            dataset_version=3, notes_temp=2, duration_temp=2, dataset_dir="../run/two_datasets_attention/store",
-            init=None)
-
-    predict(section="two_datasets_multihot", version_id=8,
-            dataset_version=3, notes_temp=4, duration_temp=4, dataset_dir="../run/two_datasets_attention/store",
-            init=None)
-
-
+    for _ in range(10):
+        predict(section="two_datasets_multihot", version_id=8,
+                dataset_version=3, notes_temp=4, duration_temp=1,
+                init=None)
 
 
 def predict_attention_hpc():
-    predict(section="two_datasets_attention_hpc", version_id=21,
-            dataset_version=2, notes_temp=1, duration_temp=1, dataset_dir="../run/two_datasets_attention/store",
-            init='cfge')
+    for _ in range(10):
+        predict(section="two_datasets_attention_hpc", version_id=21,
+                dataset_version=2, notes_temp=1.5, duration_temp=1, dataset_dir="../run/two_datasets_attention/store",
+                init=None)
 
 
 if __name__ == "__main__":
-    np.random.seed(0)  # comment when not debugging
-    # predict_attention_hpc()
+    # np.random.seed(0)  # comment when not debugging
+    predict_attention_hpc()
     predict_multihot()
+    # predict_multihot()
     # predict("two_datasets_multihot", 1, 1, 1, 1) #TODO convert into unit test
     # predict("two_datasets_attention", 3, 1, 1, 1, init="cfge") #TODO convert into unit test
     # predict("two_datasets_attention", 3, 2, 1, 1) #TODO convert into unit test

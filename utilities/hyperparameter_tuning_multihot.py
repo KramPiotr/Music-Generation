@@ -49,19 +49,46 @@ dataset_and_model = "two_datasets_multihot"
 #     "optimizer": [RMSprop]
 # }
 
+# model_param_space = {
+#     "embed_size": [3, 5],
+#     "rnn_units": [512, 1024],  # 128
+#     "dense_units": [512, 1024],  # 128
+#     "n_lstm": [2, 4],  # 2
+#     "n_dense": [2, 4],  # 1
+#     "drop1": [0, 0.2, 0.5],  # 0.2
+#     "drop2": [0, 0.2, 0.5],  # 0.2
+#     "use_attention": [True],
+#     "learning_rate": [0.001],
+#     "optimizer": [RMSprop, Adam]
+# }
+
 model_param_space = {
-    "embed_size": [3, 5],
-    "rnn_units": [512, 1024],  # 128
-    "dense_units": [512, 1024],  # 128
-    "n_lstm": [2, 4],  # 2
-    "n_dense": [2, 4],  # 1
-    "drop1": [0, 0.2, 0.5],  # 0.2
-    "drop2": [0, 0.2, 0.5],  # 0.2
+    "embed_size": [3],
+    "rnn_units": [512],  # 128
+    "dense_units": [512],  # 128
+    "n_lstm": [4],  # 2
+    "n_dense": [4],  # 1
+    "drop1": [0],  # 0.2
+    "drop2": [0],  # 0.2
     "use_attention": [True],
     "learning_rate": [0.001],
-    "optimizer": [RMSprop, Adam]
+    "optimizer": [RMSprop]
 }
 
+
+# model_param_space = {
+#     "embed_size": [3, 5],
+#     "rnn_units": [128],  # 128
+#     "dense_units": [128],  # 128
+#     "n_lstm": [4, 8],  # 2
+#     "n_dense": [4, 8],  # 1
+#     "drop1": [0, 0.2],  # 0.2
+#     "drop2": [0, 0.2],  # 0.2
+#     "use_attention": [True],
+#     "learning_rate": [0.001],
+#     "optimizer": [RMSprop, Adam]
+# }
+#
 
 # model_param_space = {
 #     "embed_size":  [2, 3, 5, 10, 30],
@@ -83,7 +110,7 @@ log_dir = f"..\\run\\{dataset_and_model}\\optimisation\\"
 os.makedirs(log_dir, exist_ok=True)
 
 epochs = 200
-patience = 3
+patience = 10
 
 scores = []
 for arg_list in tqdm(arg_values):

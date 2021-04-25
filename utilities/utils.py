@@ -126,7 +126,9 @@ def save_notes_and_durations(store_folder, notes, durations):
         pkl.dump(durations, f)
 
 
-def retrieve(store_folder, name, nonexistent=None):
+def retrieve(store_folder, name, extension=False, nonexistent=None):
+    if extension:
+        name = f"{name}.pickle"
     path_ = os.path.join(store_folder, name)
     if not os.path.exists(path_):
         if nonexistent is None:
@@ -178,7 +180,9 @@ def normalize_array(arr):
     return arr / np.maximum(1, np.tile(np.expand_dims(np.sum(arr, axis=1), axis=1), (1, arr.shape[1])))
 
 
-def dump(dir, name, file):
+def dump(dir, name, file, extension=False):
+    if extension:
+        name = f"{name}.pickle"
     with open(os.path.join(dir, name), "wb") as f:
         pkl.dump(file, f)
 

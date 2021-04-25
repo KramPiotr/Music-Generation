@@ -1,0 +1,14 @@
+assets/songs/MM/output2021_04_16--00_59_09.mp3;2;2;4
+assets/songs/Bach/bwv432.mp3;5;5;4
+assets/songs/Attention/output-2021_04_17--02_33_46-None-1.5-1-weights-improvement-11-3.5538.mp3;1.5;1;2
+assets/songs/Multihot/output-2021_04_17--02_45_20-None-4-1-weights-improvement-09-5.7726.mp3;1;1;2
+assets/songs/MusicVAE/output30_temp-0.96.mp3;4;3;3
+assets/songs/Multihot/output-2021_04_17--02_46_47-None-4-1-weights-improvement-09-5.7726.mp3;3.5;4;4
+assets/songs/MM/output2021_04_16--00_59_06.mp3;3.5;3;4
+assets/songs/Random/output16.mp3;2;2;2
+assets/songs/Bach/bwv286.mp3;5;5;4
+assets/songs/Attention/output-2021_04_17--02_42_52-None-1.5-1-weights-improvement-11-3.5538.mp3;2;2;2
+assets/songs/Random/output22.mp3;2;2;4
+assets/songs/MusicVAE/output45_temp-1.39.mp3;4;4;4
+Some of these pieces of music are terrible! No harmony, no rhythm. But some are really nice to listen to.
+Pozdrawiamy cieplutko, trzymaj się w tym kembrydżu

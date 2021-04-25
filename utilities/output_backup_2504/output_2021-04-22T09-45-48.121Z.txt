@@ -1,0 +1,12 @@
+assets/songs/Random/output34.mp3;1;2;2
+assets/songs/MusicVAE/output41_temp-1.27.mp3;2.5;4;3
+assets/songs/Bach/bwv124.mp3;3;4;3
+assets/songs/Attention/output-2021_04_17--02_32_08-None-1.5-1-weights-improvement-11-3.5538.mp3;1.5;2;3
+assets/songs/MusicVAE/output21_temp-0.70.mp3;2;3;4
+assets/songs/Random/output44.mp3;1;2;3
+assets/songs/Bach/bwv342.mp3;2.5;3;3
+assets/songs/MM/output2021_04_16--00_59_06.mp3;2.5;3;4
+assets/songs/MM/output2021_04_16--00_59_01.mp3;2;3;3
+assets/songs/Multihot/output-2021_04_17--02_48_48-None-4-1-weights-improvement-09-5.7726.mp3;3;3;5
+assets/songs/Attention/output-2021_04_17--02_43_51-None-1.5-1-weights-improvement-11-3.5538.mp3;2.5;3;3
+assets/songs/Multihot/output-2021_04_17--02_44_51-None-4-1-weights-improvement-09-5.7726.mp3;1.5;2;3

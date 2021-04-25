@@ -1,0 +1,26 @@
+assets/songs/Bach/bwv342.mp3;4;4;4
+assets/songs/Multihot/output-2021_04_17--02_47_17-None-4-1-weights-improvement-09-5.7726.mp3;2.5;2;5
+assets/songs/Random/output25.mp3;1.5;2;2
+assets/songs/Attention/output-2021_04_17--02_37_01-None-1.5-1-weights-improvement-11-3.5538.mp3;3;3;4
+assets/songs/MM/output2021_04_16--00_59_02.mp3;4;4;5
+assets/songs/Random/output40.mp3;2.5;2;3
+assets/songs/Multihot/output-2021_04_17--02_47_51-None-4-1-weights-improvement-09-5.7726.mp3;2;3;4
+assets/songs/MM/output2021_04_16--00_59_09.mp3;2;2;3
+assets/songs/MusicVAE/output8_temp-0.33.mp3;4;4;5
+assets/songs/MusicVAE/output1_temp-0.13.mp3;3.5;4;4
+assets/songs/Attention/output-2021_04_17--02_37_59-None-1.5-1-weights-improvement-11-3.5538.mp3;2.5;2;3
+assets/songs/Bach/bwv344.mp3;4.5;4;3
+No1: sounds medieval
+No2: had some interesting decisions but isn't quite cohesive enough
+No3: sounds like you gave a child a piano
+No4: Sounds like a bit more full varient of No2
+No5: has nice repeats
+No6: sounds almost horrorish
+No7: sort of meh
+No8: Same
+No9: Sort of spooky, mordorish
+No10: goodish
+No11: meh-ish
+No12: goes back to being like No1; sounds medieval but quite good
+
+Experimental note: are these songs being randomised between participants? if not there may be some ordering bias (at least I feel like I might have some my self)

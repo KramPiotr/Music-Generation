@@ -89,7 +89,7 @@ def get_note(note_repr, dur_repr,  str=False, treshold=None):
                 return note.Rest(duration=dur)
         if len(hots) == 1:
             return note.Note(hots[0], duration=dur)
-        return chord.Chord(hots, duration=dur)
+        return chord.Chord([int(h) for h in hots], duration=dur)
 
 def process_midi(dataset, seq_len, store_folder, raw = False, whole_dataset = False):
     midi_files = os.path.join(dataset, "*.mid")
