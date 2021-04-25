@@ -15,6 +15,8 @@ from functools import partial
 import signal
 import time
 
+dataset_version = 2 #TODO remember to change accordingly
+
 def log_results(*args):
     global scores, epochs, patience
     with open(f"{log_dir}results{datetime.now().strftime('%m%d%H%M')}.txt", "w") as f:
@@ -93,7 +95,7 @@ for arg_list in tqdm(arg_values):
         descr += f"    {key:<20}{value}\n"
     descr += "\n"
     print(descr)
-    run_id, score = run(dataset_and_model, 0, create_network, experiment_kwargs, epochs = epochs, patience = patience, descr=descr)
+    run_id, score = run(dataset_and_model, dataset_version, create_network, experiment_kwargs, epochs = epochs, patience = patience, descr=descr) #TODO remember to change dataset version
     time.sleep(1)
     print(f"\nFinal loss achieved for the model with id {run_id} is: {score}")
     scores.append((score, run_id, experiment_kwargs))
