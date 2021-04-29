@@ -7,7 +7,7 @@ from utilities.utils import retrieve_notes_and_durations
 from tqdm import tqdm
 from pathlib import Path
 import os
-import glob
+from glob import glob
 import itertools
 import pickle as pkl
 from codetiming import Timer
@@ -89,7 +89,7 @@ def process_plagiarism(song_path, database_path, hardcode=None):
 
 def put_into_dirs():
     multihot_output_dir = Path("../run/two_datasets_multihot/compose/0/output/")
-    for output in glob.glob(os.path.join(multihot_output_dir, "output*.mid")):
+    for output in glob(os.path.join(multihot_output_dir, "output*.mid")):
         filename = output.split(os.path.sep)[-1]
         dirname = output[:-4]
         os.mkdir(dirname)
@@ -100,19 +100,39 @@ def put_into_dirs():
 def remove_error_output():
     db1_path = '..\\run\\two_datasets_attention\\compose\\00\\*\\s*.mid*'
     db2_path = "..\\run\\two_datasets_multihot\\compose\\0\\output\\*\\s*.mid*"
-    database = glob.glob(db1_path) + glob.glob(db2_path)
+    database = glob(db1_path) + glob(db2_path)
     for file in database:
         os.remove(file)
 
 
-def process_plagiarism_for_database():
-    db1_path = '..\\run\\two_datasets_attention\\compose\\00\\*\\output*.mid'
-    db2_path = "..\\run\\two_datasets_multihot\\compose\\0\\output\\*\\output*.mid"
-    database = glob.glob(db2_path)
-    # database = glob.glob(db1_path) + glob.glob(db2_path)
-    # database = [r"..\run\two_datasets_attention\compose\00\output-2021_01_12--06_24_36-None-0.0-0.0-weights.h5\output_init_none.mid"]
+def get_evaluation_glob():
+    evaluation_mp3s = glob("../evaluation_pieces/**/*.mp3", recursive=True)
+    evaluation_midis = []
+    for path_ in evaluation_mp3s:
+        song = os.path.splitext(os.path.basename(path_))[0]
+        if "Random" in path_:
+            song = f"random_generator\\{song}"
+        if "Attention" in path_ or "Multihot" in path_:
+            song = song + "*/*.mid*"
+        else:
+            song += ".mid*"
+        midi_path = glob(f"../**/{song}", recursive=True)
+        assert (len(midi_path) == 1)
+        midi_path = midi_path[0]
+        evaluation_midis.append(midi_path)
+    return evaluation_midis
 
-    two_datasets_path = Path("..\\run\\two_datasets_store")
+
+def process_plagiarism_for_database(glob_database=None, results_path=None, dataset_version=3):
+    # db1_path = '..\\run\\two_datasets_attention\\compose\\00\\*\\output*.mid'
+    # db2_path = "..\\run\\two_datasets_multihot\\compose\\0\\output\\*\\output*.mid"
+    # database = glob(db2_path)
+    # database = glob(db1_path) + glob(db2_path)
+    # database = [r"..\run\two_datasets_attention\compose\00\output-2021_01_12--06_24_36-None-0.0-0.0-weights.h5\output_init_none.mid"]
+    if glob_database is None:
+        glob_database = get_evaluation_glob()
+
+    two_datasets_path = Path(f"..\\run\\two_datasets_store\\version_{dataset_version}")
     db_n, db_d = retrieve_notes_and_durations(two_datasets_path)
     db_n_mh = multi_hot_encoding_12_tones(db_n)
     multihot_tuples_db = db_n_mh  # [tuple(c) for c in db_n_mh]
@@ -120,8 +140,11 @@ def process_plagiarism_for_database():
     with open("iou_scores", "rb") as f:
         iou_scores = pkl.load(f)
 
-    with open("../run/two_datasets_multihot/compose/plagiarism_scores_for_two_datasets_multihot.txt", "w") as f:
-        for song_path in tqdm(database):
+    if results_path is None:
+        results_path = "../evaluation_pieces/plagiarism_scores.txt"
+    # with open("../run/two_datasets_multihot/compose/plagiarism_scores_for_two_datasets_multihot.txt", "w") as f:
+    with open(results_path, "w") as f:
+        for song_path in tqdm(glob_database):
             song = converter.parse(song_path)
             s_n, s_d = extract_notes(song, None, False)
             s_n_mh = multi_hot_encoding_12_tones(s_n)
@@ -159,6 +182,12 @@ def saveIoU():
     with open("iou_scores", "wb") as f:
         pkl.dump(iou_scores, f)
 
+def find_fragments():
+    for path_ in glob("../**/song_fragment*", recursive=True):
+        print(path_)
+
 
 if __name__ == "__main__":
-    process_plagiarism_for_database()
+    # get_evaluation_glob()
+    # process_plagiarism_for_database()
+    find_fragments()

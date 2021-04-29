@@ -15,7 +15,7 @@ from functools import partial
 import signal
 import time
 
-dataset_version = 2 #TODO remember to change accordingly
+dataset_version = 3 #TODO remember to change accordingly
 
 def log_results(*args):
     global scores, epochs, patience

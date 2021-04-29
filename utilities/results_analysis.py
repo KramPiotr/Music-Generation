@@ -1,8 +1,27 @@
 from glob import glob
 import pandas as pd
 import os
-from utilities.utils import print_to_file
+import matplotlib.pyplot as plt
+import numpy as np
+from utilities.utils import print_to_file, save_fig
 from functools import partial
+
+def plot_results(results_database):
+    scores = []
+    for i, result in enumerate(glob(os.path.join(results_database, "*"))):
+        test_results = os.path.join(result, "test_results.txt")
+        if not os.path.exists(test_results):
+            continue
+        with open(test_results, "r") as f:
+            scores.append((float(f.readlines()[1].split(":")[1]), result[-2:]))
+    scores.sort()
+    losses = [x[0] for x in scores]
+    plt.bar(np.arange(len(losses)), losses)
+    plt.title("Distribution for the test loss in the tuned models")
+    plt.xlabel("Models")
+    plt.ylabel("Test loss")
+    plt.yticks([])
+    save_fig(plt, results_database, "test_loss")
 
 def analyse_results(results_database):
     with open(os.path.join(results_database, "results_analysis.txt"), "w") as f:
@@ -28,6 +47,10 @@ def analyse_hpc_results():
     results_database = "..\\run\\two_datasets_attention_hpc\\"
     analyse_results(results_database)
 
+def plot_hpc_results():
+    results_database = "..\\run\\two_datasets_attention_hpc\\"
+    plot_results(results_database)
+
 def analyse_attention_models():
     results_database = "..\\run\\two_datasets_attention"
     analyse_results(results_database)
@@ -37,4 +60,4 @@ def analyse_multihot_models():
     analyse_results(results_database)
 
 if __name__ == "__main__":
-    analyse_multihot_models()
+    plot_hpc_results()

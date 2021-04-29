@@ -1,4 +1,4 @@
-# Author: Piotr Kram3
+# Author: Piotr Kram
 import numpy as np
 from tensorflow.keras.layers import LSTM, Input, Dropout, Dense, Activation, Embedding, Concatenate, Reshape, \
     BatchNormalization
