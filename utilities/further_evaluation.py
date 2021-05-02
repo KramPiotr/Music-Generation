@@ -6,17 +6,17 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 
 from utilities.evaluation import by_model, get_sorted_keys, retrieve_, dump_, analyze_cross_corr_outsiders, \
-    plot_means_outsiders
+    plot_means_outsiders, in_kwargs
 from utilities.utils import print_to_file, save_fig
 
 evaluation_dir = "./evaluation_results"
 
 
-def print_mean_stds_by_model():
+def print_mean_stds_by_model(**kwargs):
     global evaluation_dir
-    mean_by_model = by_model(mean)
-    std_by_model = by_model(stdev)
-    with open(os.path.join(evaluation_dir, "mean_std_by_model.txt"), "w") as f:
+    mean_by_model = by_model(mean, **kwargs)
+    std_by_model = by_model(stdev, **kwargs)
+    with open(os.path.join(evaluation_dir, f"mean_std_by_model{in_kwargs(kwargs, 'name', '')}.txt"), "w") as f:
         print_ = partial(print_to_file, file=f)
         models = get_sorted_keys(mean_by_model['overall'])
         for model in models:
@@ -94,6 +94,8 @@ def plot_cross_corr_by_user():
 
 def update_db_2():
     print_mean_stds_by_model()
+    print_mean_stds_by_model(name="uncorr_df")
+    print_mean_stds_by_model(name="corr_df")
     novel_averse_seeking_division()
     plot_cross_corr_by_user()
     analyze_cross_corr_outsiders()

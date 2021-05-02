@@ -136,10 +136,12 @@ def extract_label(name, model):
         return name[:-4]
     return re.search("-\d\d_\d\d_\d\d", name).group()[1:]
 
+def in_kwargs(kwargs, arg, default):
+    return default if not arg in kwargs else kwargs[arg]
 
 def plot_means_by_item(mean_by_item, std_by_item, name, title=None, legend=True, colours=None,
                        show=True, rotation=0, model=None, figsize=None, save=True, bar_label=False,
-                       title_mp=False):
+                       title_mp=False, **kwargs):
     global pickle_dir, evaluation_dir
     widths = [1, 2, 1]
     centers = [1, 2.5, 4]
@@ -156,7 +158,8 @@ def plot_means_by_item(mean_by_item, std_by_item, name, title=None, legend=True,
                         color=colours[i],
                         yerr=std_by_item[c][m])
                 if bar_label:
-                    plt.bar_label(bar, labels=[f"{mean_by_item[c][m]:.2f}"])
+                    plt.bar_label(bar, labels=[f"{mean_by_item[c][m]:.2f}"],
+                                  label_type=in_kwargs(kwargs, 'label_type', 'edge'))
         plt.xticks(
             ticks=[2.5 + 5 * j for j in np.arange(len(items))],
             labels=[extract_label(n, model) for n in items],
@@ -214,7 +217,7 @@ def switch_key_order(dict_):
     return result
 
 
-def analyze_scores(plot_model=True, name=None, representation=None, legend=True, title_mp=False):
+def analyze_scores(plot_model=True, name=None, representation=None, legend=True, title_mp=False, **kwargs):
     mean_by_model = by_model(mean, name)
     std_by_model = by_model(stdev, name)
 
@@ -231,7 +234,7 @@ def analyze_scores(plot_model=True, name=None, representation=None, legend=True,
 
     if plot_model:
         make_main_plot = plot_means_by_item(mean_by_model, std_by_model, name=main_name,
-                           title=main_title, figsize=(8, 6), title_mp=title_mp, legend=legend)
+                           title=main_title, figsize=(8, 6), title_mp=title_mp, legend=legend, **kwargs)
 
     mean_by_model_song = by_model_song(mean)
     std_by_model_song = by_model_song(stdev)
@@ -454,9 +457,11 @@ def analyze_cross_corr_outsiders():
             dataframes[i][c] = score_dataframe[c].iloc[ind]
     dump_(name="uncorr_df", file=dataframes[0])
     dump_(name="corr_df", file=dataframes[1])
-    mps = [analyze_scores(plot_model=True, name="uncorr_df", representation="novelty averse people", title_mp=True, legend=False),
-            analyze_scores(plot_model=True, name="corr_df", representation="novelty seeking people", title_mp=True)]
-    plt.figure(figsize=(8, 6))
+    mps = [analyze_scores(plot_model=True, name="uncorr_df", representation="novelty averse people",
+                          title_mp=True, legend=False, bar_label=True, label_type='center'),
+            analyze_scores(plot_model=True, name="corr_df", representation="novelty seeking people",
+                           title_mp=True, bar_label=True, label_type='center')]
+    plt.figure(figsize=(10, 8))
     plt.subplot(2, 1, 1)
     mps[1]()
     plt.subplot(2, 1, 2)
