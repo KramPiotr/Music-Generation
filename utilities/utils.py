@@ -158,7 +158,11 @@ def retrieve_network_input_output(store_folder, n_if_shortened=None):
     return (in_, out_)
 
 
-def color_list(kind, mod):
+def color_list(kind, mod=None):
+    if type(kind) is int:
+        kind = np.arange(kind)
+    if mod is None:
+        mod = len(kind)
     color_map = np.random.rand(mod, 3)
     colors = [0]
     for i in range(1, len(kind)):

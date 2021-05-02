@@ -11,17 +11,48 @@ analyze.py
   create_processed
   analyze_dataset
   check_for_rests
+  analyze_dataset_by_version
 
 csv_analysis.py
+
+evaluation.py
+  extract_score
+  analyze_outputs
+  save_scores
+  get_sorted_keys
+  extract_label
+  plot_means_by_item
+  by_model
+  by_model_song
+  std_of_stds
+  accumulate_by_criterium
+  switch_key_order
+  analyze_scores
+  test_re
+  plot_correlations
+  ctn
+  plot_cross_corr_by_user
+  plot_mean_cross_correlation
+  calculate_cross_criteria_correlation
+  transform_and_plot_correlation
+  analyze_cross_corr_outsiders
+  plot_means_outsiders
+  process_cross_correlations
+  process_all_correlations
+  update_database
 
 generate_database.py
 
 hyperparameter_tuning.py
   log_results
 
+hyperparameter_tuning_multihot.py
+  log_results
+
 midi_utils.py
   open_midi
   extract_notes
+  new_extract_notes
   get_note
   process_midi
   translate_chord
@@ -31,6 +62,10 @@ midi_utils.py
 
 multiple_predict.py
   multi_predict
+  save_model_from_multihot
+  generate_multihot
+  save_model_from_hpc
+  generate_attention_hpc
 
 notes_utils.py
   remove_repetition
@@ -53,11 +88,16 @@ plagiarism_detection.py
   process_plagiarism
   put_into_dirs
   remove_error_output
+  get_evaluation_glob
   process_plagiarism_for_database
   saveIoU
+  find_fragments
 
 predict.py
   predict
+  predict_multihot_without_saved_model
+  predict_multihot
+  predict_attention_hpc
 
 print_functions.py
   top_level_functions
@@ -73,9 +113,19 @@ process_midi_archive.py
   process_datasets
 
 results_analysis.py
+  plot_results
+  analyse_results
+  analyse_hpc_results
+  plot_hpc_results
+  analyse_attention_models
+  analyse_multihot_models
 
 run.py
   run
+  run_trial_attention
+  run_attention
+  run_trial_multihot
+  run_multihot
 
 run_utils.py
   id_to_str
@@ -86,6 +136,7 @@ utils.py
   create_lookups
   prepare_sequences
   find_interpolated
+  multihot_sample
   sample_with_temp
   save_notes_and_durations
   retrieve
@@ -100,6 +151,7 @@ utils.py
   print_to_file
   truncate_str
   save_model_to_json
+  retrieve_final_model
   retrieve_model_from_json
   retrieve_attention_model
   retrieve_best_model
@@ -109,4 +161,6 @@ utils.py
   par_dir
   change_path
   test_change_path
+  draw_representatives
+  draw_evaluation_model_representatives
 

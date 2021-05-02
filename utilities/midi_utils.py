@@ -21,7 +21,55 @@ def open_midi(midi_path, remove_drums=True):
             mf.tracks[i].events = [ev for ev in mf.tracks[i].events if ev.channel != 10]
     return midi.translate.midiFileToStream(mf)
 
-def extract_notes(score, seq_len=None, with_start=True, raw=False):
+def extract_notes(score, seq_len=None, with_start=True, raw=False, log=False):
+    parts = instrument.partitionByInstrument(score)
+
+    if parts:
+        parts_to_parse = [part.recurse() for part in parts.parts]
+        if log:
+            print(f"Found {len(parts_to_parse)} parts")
+        if seq_len is not None:
+            parts_to_parse = filter(lambda part: len(part) > 3 * seq_len, parts_to_parse)
+            if log:
+                print(f"After filtering out short parts there are {len(list(parts_to_parse))} parts left")
+    else:  # file has notes in a flat structure
+        parts_to_parse = [score.flat.notes]
+        if log:
+            print("No parts structure found. Converting the piece to flat structure")
+
+    notes = []
+    durations = []
+    for notes_to_parse in parts_to_parse:
+        part_notes = []
+        part_durations = []
+        if with_start and seq_len is not None:
+            part_notes.extend([[-1]] * seq_len)
+            part_durations.extend([0] * seq_len)
+
+        for element in notes_to_parse:
+            if isinstance(element, note.Note):
+                part_durations.append(element.duration.quarterLength)
+                if element.isRest:
+                    part_notes.append([-1])
+                else:
+                    part_notes.append([element.pitch.ps])
+
+            if isinstance(element, chord.Chord):
+                part_durations.append(element.duration.quarterLength)
+                part_notes.append(sorted([pitch.ps for pitch in element.pitches]))
+        if not raw:
+            if log:
+                print(f"Before preprocessing we had {len(part_notes)} notes")
+            part_notes, part_durations = single_part_preprocess(part_notes, part_durations)
+            if log:
+                print(f"After preprocessing we have {len(part_notes)} notes")
+        notes.extend(part_notes)
+        durations.extend(part_durations)
+    if log:
+        print(f"At the end we have {len(notes)} notes")
+    return notes, durations
+
+def new_extract_notes(score, seq_len=None, with_start=True, raw=False):
     parts = instrument.partitionByInstrument(score)
 
     if parts:

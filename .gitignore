@@ -148,3 +148,5 @@ utilities/midi_to_mp3/utilities/example/wav/billie_jean.wav
 utilities/midi_to_mp3/ffmpeg.exe
 datasets.rar
 evaluation_models/compose/
+evaluation_models/MM_data
+utilities/evaluation_results

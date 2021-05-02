@@ -7,11 +7,11 @@ import os
 
 def extract_only_music():
     score = open_midi(f"./Bach/invent1.mid")
-    notes, durations = extract_notes(score.elements[0], with_start=False, raw=True) # I made sure that there is only one part in this piece
+    notes, durations = extract_notes(score.elements[0], with_start=False, raw=True, log=True) # I made sure that there is only one part in this piece
     midi_stream = stream.Stream()
     for n, d in zip(notes, durations):
         midi_stream.append(get_note(n, d))
-    midi_stream.write('midi', fp=f"./Bach/invent1_clear.mid")
+    midi_stream.write('midi', fp=f"./Bach/invent1_newputback.mid")
 
 def extract_bach_music():
     paths = np.array([str(path) for path in corpus.getComposer('bach') if "bwv" in str(path)])
@@ -26,5 +26,5 @@ def extract_bach_music():
 
 
 if __name__ == "__main__":
-    # extract_only_music()
-    extract_bach_music()
+    extract_only_music()
+    # extract_bach_music()
