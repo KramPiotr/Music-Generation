@@ -10,8 +10,7 @@ from utilities.utils import color_list, save_notes_and_durations, retrieve_notes
 from utilities.midi_utils import translate_chord
 from utilities.part_utils import preprocess
 from functools import partial
-
-rc('text',usetex=True)
+import matplotlib.patches as mpatches
 
 ################################# Getters ###############################
 
@@ -190,6 +189,45 @@ def analyze_frequencies_by_group(analyze_dir, suffix="", n_max_chords=10, n_labe
     return make_plot1, make_plot2
 
 
+def plot_frequent_chords():
+    def process(line):
+        line = line.replace('-', 'b')
+        y = int(line[30:])
+        part1 = line[:30].split(".")[1]
+        splitted = part1.split("bb")
+        if len(splitted) == 1:
+            return (splitted[0].strip(), y)
+        else:
+            return (splitted[0].strip(), y, splitted[1].strip())
+
+    analysis_dir = '..\\run\\two_datasets_store\\version_3\\analysis'
+    fig = plt.figure(figsize=(10, 6))
+    plt.suptitle("Most frequent chords grouped by length", fontsize=17)
+    patches = [mpatches.Patch(color='black', label='font color for pitches'),
+               mpatches.Patch(color='#D0171F', label='font color for music chords')]
+    fig.legend(handles=patches)
+    for i in range(1, 5):
+        fc = os.path.join(analysis_dir, f'fc{i}.txt')
+        with open(fc, 'r') as f:
+            lines = f.readlines()
+            data = [process(line) for line in lines]
+            labels = [x[0] for x in data]
+            ys = [x[1] for x in data]
+            plt.subplot(2, 2, i)
+            color = ['#FF993380', '#FF660080']
+            if i < 3:
+                color = [c[:-2] for c in color]
+            bars = plt.bar(np.arange(len(ys)), ys, tick_label=labels, color=color)
+            if i > 2:
+                bar_labels = [x[2] for x in data]
+                plt.bar_label(bars, labels=bar_labels, label_type='center', color='#D0171F', fontweight='bold', fontsize=8)
+            if i > 1:
+                plt.xticks(rotation=30)
+    save_fig(plt, analysis_dir, "frequency_length")
+    plt.show()
+    #for fc in ['fc1.txt', 'fc2.txt', 'fc3.txt', 'fc4.txt']
+
+
 ################################# Durations analysis ###############################
 
 # TODO remember incorporate notes changes into durations changes
@@ -218,6 +256,8 @@ def analyze_frequencies_by_duration(analyze_dir, suffix="", space_labels=2, **kw
     with open(os.path.join(analyze_dir, "durations_by_frequency" + suffix + ".txt"), "w") as f:
         for i, (dur, occur) in enumerate(sorted_occurences):
             f.write(('%-40s' % f"    {i}. {dur} ") + f"{occur}\n")  # you can change up to something easy to read
+
+    rc('text', usetex=True)
 
     plt.figure()
 
@@ -278,7 +318,7 @@ def analyze_dataset(dataset_dir):
         plt.subplot(2, 2, 4)
         zipf_plot()
         plt.tight_layout(2)
-        save_fig(plt, analyze_dir, "visualization")
+        save_fig(plt, analyze_dir, "dataset_visualization")
 
 
 def check_for_rests(dataset_dir):
@@ -296,8 +336,16 @@ def check_for_rests(dataset_dir):
 def analyze_dataset_by_version(version=3):
     analyze_dataset(f"../run/two_datasets_store/version_{version}")
 
-if __name__ == "__main__":
+def change_font():
+    plt.rcParams["font.family"] = "serif"
     analyze_dataset_by_version()
+    plot_frequent_chords()
+
+if __name__ == "__main__":
+    pass
+    # change_font()
+    # plot_frequent_chords()
+    # analyze_dataset_by_version()
     # pass
     # check_for_rests("../run/two_datasets_store/version_1")
     # analyze_dataset("../run/two_datasets_store/version_0")

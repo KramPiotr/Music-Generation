@@ -1,5 +1,7 @@
 from glob import glob
 import os
+
+from scipy import stats
 from tqdm import tqdm
 from utilities.utils import dump, retrieve, save_fig, color_list
 from statistics import mean, stdev
@@ -13,6 +15,7 @@ from functools import partial
 import math
 import matplotlib.colors as colors
 import matplotlib.cm as cmx
+import copy
 
 evaluation_dir = "./evaluation_results"
 pickle_dir = os.path.join(evaluation_dir, "pickles")
@@ -136,10 +139,14 @@ def extract_label(name, model):
         return name[:-4]
     return re.search("-\d\d_\d\d_\d\d", name).group()[1:]
 
+
 def in_kwargs(kwargs, arg, default):
     return default if not arg in kwargs else kwargs[arg]
 
-def plot_means_by_item(mean_by_item, std_by_item, name, title=None, legend=True, colours=None,
+def conf_95(std, n):
+    return stats.t.ppf(0.975, df=n-1) * std / math.sqrt(n)
+
+def plot_means_by_item(mean_by_item, std_by_item, n_items, name, title=None, legend=True, colours=None,
                        show=True, rotation=0, model=None, figsize=None, save=True, bar_label=False,
                        title_mp=False, **kwargs):
     global pickle_dir, evaluation_dir
@@ -149,17 +156,25 @@ def plot_means_by_item(mean_by_item, std_by_item, name, title=None, legend=True,
         colours = ['#F9DC5C', '#ED254E', '#C2EABD']
     items = get_sorted_keys(mean_by_item["overall"])
 
+    if type(n_items) is int:
+        n_items = {item: n_items for item in items}
+
     def make_plot():
         for i, c in enumerate(["pleasant", "overall", "novel"]):
             for j, m in enumerate(items):
                 bar = plt.bar(x=centers[i] + 5 * j,
-                        height=mean_by_item[c][m],
-                        width=widths[i],
-                        color=colours[i],
-                        yerr=std_by_item[c][m])
+                              height=mean_by_item[c][m],
+                              width=widths[i],
+                              color=colours[i],
+                              yerr=conf_95(std_by_item[c][m], n_items[m]))
+                              # error_kw={
+                              #     'yerr': std_by_item[c][m],
+                              #     'fmt': '.k',
+                              # })
                 if bar_label:
                     plt.bar_label(bar, labels=[f"{mean_by_item[c][m]:.2f}"],
-                                  label_type=in_kwargs(kwargs, 'label_type', 'edge'))
+                                  label_type=in_kwargs(kwargs, 'label_type', 'edge'),
+                                  fontsize=in_kwargs(kwargs, 'bar_label_font_size', 10))
         plt.xticks(
             ticks=[2.5 + 5 * j for j in np.arange(len(items))],
             labels=[extract_label(n, model) for n in items],
@@ -201,8 +216,10 @@ def by_model_song(f):
         c: {m: {s: f(l) for s, l in song_to_score.items()} for m, song_to_score in model_to_dict.items()} for
         c, model_to_dict in score_by_model_song.items()}
 
+
 def std_of_stds(x):
-    return math.sqrt(sum(np.array(list(x))**2))/len(x)
+    return math.sqrt(sum(np.array(list(x)) ** 2)) / len(x)
+
 
 def accumulate_by_criterium(f, dict_):
     return {c: f(model_to_score.values()) for c, model_to_score in dict_.items()}
@@ -220,6 +237,7 @@ def switch_key_order(dict_):
 def analyze_scores(plot_model=True, name=None, representation=None, legend=True, title_mp=False, **kwargs):
     mean_by_model = by_model(mean, name)
     std_by_model = by_model(stdev, name)
+    n_items = by_model(len, name)['overall']
 
     def transform(sentence):
         if name is None:
@@ -230,25 +248,30 @@ def analyze_scores(plot_model=True, name=None, representation=None, legend=True,
             return sentence + f"_for_{name}"
 
     main_name = transform("mean_scores_by_model")
-    main_title = transform("Mean scores and their standard deviations by model")
+    main_title = transform("Mean scores and their 95% confidence intervals by model")
 
     if plot_model:
-        make_main_plot = plot_means_by_item(mean_by_model, std_by_model, name=main_name,
-                           title=main_title, figsize=(8, 6), title_mp=title_mp, legend=legend, **kwargs)
+        make_main_plot = plot_means_by_item(mean_by_model, std_by_model, n_items, name=main_name,
+                                            title=main_title, figsize=(8, 6), title_mp=title_mp, legend=legend,
+                                            **kwargs)
 
     mean_by_model_song = by_model_song(mean)
     std_by_model_song = by_model_song(stdev)
+    len_by_model_song = by_model_song(len)
     mean_by_criteria_song = switch_key_order(mean_by_model_song)
     std_by_criteria_song = switch_key_order(std_by_model_song)
 
     models = get_sorted_keys(mean_by_model['overall'])
     plt.figure(figsize=(12, 15))
-    plt.suptitle(transform("Mean scores and their standard deviations by song"), fontsize=20)
+    plt.suptitle(transform("Mean scores and their 95% confidence intervals by song"), fontsize=20)
     for i, m in enumerate(models):
         plt.subplot(len(models), 1, i + 1)
         plt.title(f"Model: {m}, overall mean: {mean_by_model['overall'][m]:.2f}")
-        make_plot = plot_means_by_item(mean_by_criteria_song[m], std_by_criteria_song[m], name=transform(f"mean_scores_for_{m}"),
-                                       title=transform(f"Mean scores and their standard deviations by song for model {m}"),
+        make_plot = plot_means_by_item(mean_by_criteria_song[m], std_by_criteria_song[m],
+                                       len_by_model_song['overall'][m],
+                                       name=transform(f"mean_scores_for_{m}"),
+                                       title=transform(
+                                           f"Mean scores and their 95% confidence intervals by song for model {m}"),
                                        legend=i == 0,
                                        save=False,
                                        show=False,
@@ -273,20 +296,20 @@ def plot_correlations(corr, name, title, rotate=True, less_ticks=False):
         ax = sns.heatmap(
             corr,
             vmin=-1, vmax=1, center=0,
-            cmap=sns.diverging_palette(20, 220, n=200),
+            cmap=sns.diverging_palette(220, 20, n=200),
             square=True,
             cbar=cbar
         )
 
         if less_ticks:
             plt.yticks(
-                ticks = ax.get_yticks()[::2],
-                labels = ax.get_yticklabels()[::2]
+                ticks=ax.get_yticks()[::2],
+                labels=ax.get_yticklabels()[::2]
             )
 
             plt.xticks(
-                ticks = ax.get_xticks()[::2],
-                labels = ax.get_xticklabels()[::2]
+                ticks=ax.get_xticks()[::2],
+                labels=ax.get_xticklabels()[::2]
             )
 
         ax.set_yticklabels(
@@ -362,25 +385,26 @@ def plot_mean_cross_correlation(magnitude=True):
 
     plt.figure()
     if magnitude:
-        plt.title("Mean magnitudes of the correlations and their standard deviations")
+        plt.title("Mean magnitudes of the correlations and their 95% confidence intervals")
         ymaterial = abs_corrs
         filename = "cross_correlation_magnitude"
     else:
-        plt.title("Mean correlations and their standard deviations")
+        plt.title("Mean correlations and their 95% confidence intervals")
         ymaterial = corrs
         filename = "cross_correlation"
 
     xs = np.arange(3)
 
     ys = [x.mean() for x in ymaterial]
-    yerrs = [x.std() for x in ymaterial]
+    yerrs = [conf_95(x.std(), len(x)) for x in ymaterial]
 
     labels = ["Overall-Novelty", "Overall-Pleasantness", "Novelty-Pleasantness"]
     np.random.seed(10)
 
     def make_plot():
         plt.ylim([-1.15, 1.15])
-        bars = plt.bar(x=xs, height=ys, yerr=yerrs, color = '#ED254E')# color=['#F9DC5C', '#ED254E', '#C2EABD'])#color_list(xs, 3))
+        bars = plt.bar(x=xs, height=ys, yerr=yerrs,
+                       color='#ED254E')  # color=['#F9DC5C', '#ED254E', '#C2EABD'])#color_list(xs, 3))
         plt.xticks(xs, labels)
         plt.bar_label(bars, labels=[f"{y:.2f}" for y in ys])
         # for x in xs:
@@ -400,7 +424,8 @@ def calculate_cross_criteria_correlation():
     dump_(name="overall_pleasant", file=overall_pleasant)
     dump_(name="novel_pleasant", file=novel_pleasant)
 
-#TODO uporzadkuj i zaplotuj dla tych grup uzytkownikow
+
+# TODO uporzadkuj i zaplotuj dla tych grup uzytkownikow
 
 def multiplot_correlation(make_plots):
     plt.figure(figsize=(13.3, 8))
@@ -413,10 +438,10 @@ def multiplot_correlation(make_plots):
     plt.tight_layout(2)
 
     norm = colors.Normalize(vmin=-1, vmax=1)
-    cmap = sns.diverging_palette(20, 220, n=200, as_cmap=True)
+    cmap = sns.diverging_palette(220, 20, n=200, as_cmap=True)
     scalar_map = cmx.ScalarMappable(norm=norm, cmap=cmap)
     plt.subplots_adjust(bottom=0.1, right=0.9, top=0.9)
-    cax = plt.axes([0.92, 0.1, 0.03, 0.8])
+    cax = plt.axes([0.94, 0.1, 0.02, 0.8])
     plt.colorbar(scalar_map, cax=cax)
 
     save_fig(plt, evaluation_dir, "multiplot_correlation")
@@ -430,23 +455,40 @@ def transform_and_plot_correlation():
     corr_by_user = {}
 
     make_plots = []
+    raw_score_dataframe = copy.deepcopy(score_by_model)
     for c in score_by_model.keys():
         for m in score_by_model[c].keys():
             score_by_model[c][m] = np.array(score_by_model[c][m])
             score_by_model[c][m] = (score_by_model[c][m][::2] + score_by_model[c][m][1::2]) / 2
         score_by_model[c] = pd.DataFrame(score_by_model[c])
+        raw_score_dataframe[c] = pd.DataFrame(raw_score_dataframe[c])
         corr_by_model[c] = score_by_model[c].corr()
         corr_by_user[c] = score_by_model[c].T.corr()
         mp = plot_correlations(corr_by_model[c], f"model_correlation_{c}", f"{ctn(c)} scores correlated by model")
         make_plots.append(mp)
         mp = plot_correlations(corr_by_user[c], f"user_correlation_{c}",
-                          f"{ctn(c)} scores correlated by participant", rotate=False, less_ticks=True)
+                               f"{ctn(c)} scores correlated by participant", rotate=False, less_ticks=True)
         make_plots.append(mp)
     multiplot_correlation(make_plots)
     dump_(name="score_dataframe", file=score_by_model)
+    dump_(name="raw_score_dataframe", file=raw_score_dataframe)
     dump_(name="corr_by_model", file=corr_by_model)
     dump_(name="corr_by_user", file=corr_by_user)
+    raw_uncorr_corr()
     # KMeans()
+
+def raw_uncorr_corr():
+    uncorr_corr = list(retrieve_(name="uncorr-corr"))
+    raw_score_dataframe = retrieve_(name="raw_score_dataframe")
+    raw_uncorr_corr = [np.array([(2*x, 2*x + 1) for x in xs]).flatten() for xs in uncorr_corr]
+    raw_dfs = [{}, {}]
+    for i, ind in enumerate(raw_uncorr_corr):
+        for c in raw_score_dataframe.keys():
+            raw_dfs[i][c] = raw_score_dataframe[c].iloc[ind]
+    dump_(name="raw_uncorr_df", file=raw_dfs[0])
+    dump_(name="raw_corr_df", file=raw_dfs[1])
+
+
 
 def analyze_cross_corr_outsiders():
     uncorr_ind, corr_ind = retrieve_(name="uncorr-corr")
@@ -458,9 +500,9 @@ def analyze_cross_corr_outsiders():
     dump_(name="uncorr_df", file=dataframes[0])
     dump_(name="corr_df", file=dataframes[1])
     mps = [analyze_scores(plot_model=True, name="uncorr_df", representation="novelty averse people",
-                          title_mp=True, legend=False, bar_label=True, label_type='center'),
-            analyze_scores(plot_model=True, name="corr_df", representation="novelty seeking people",
-                           title_mp=True, bar_label=True, label_type='center')]
+                          title_mp=True, legend=False, bar_label=True, label_type='center', bar_label_font_size=10),
+           analyze_scores(plot_model=True, name="corr_df", representation="novelty seeking people",
+                          title_mp=True, bar_label=True, label_type='center', bar_label_font_size=10)]
     plt.figure(figsize=(10, 8))
     plt.subplot(2, 1, 1)
     mps[1]()
@@ -470,43 +512,78 @@ def analyze_cross_corr_outsiders():
     save_fig(plt, evaluation_dir, "multiplot_novelty")
     plt.show()
 
+# def len_df(df=None):
+#     if df is None:
+#         df = by_model(len, name)['overall']
+#     return list(df.values())[0].shape[0]
 
 def plot_means_outsiders():
-    dfs = ["uncorr_df", "corr_df"]
+    dfs = ["raw_uncorr_df", "raw_corr_df"]
     keys = ["Averse", "Seeking"]
     mean_by_item = {}
     std_by_item = {}
+    lens = {}
     for df, k in zip(dfs, keys):
         means = accumulate_by_criterium(mean, by_model(mean, df))
         stds = accumulate_by_criterium(std_of_stds, by_model(stdev, df))
+        lens[k] = list(retrieve_(name=df).values())[0].shape[0]
         for c in means.keys():
             mean_by_item.setdefault(c, {})
             std_by_item.setdefault(c, {})
             mean_by_item[c][k] = means[c]
             std_by_item[c][k] = stds[c]
-    plot_means_by_item(mean_by_item, std_by_item, "mean_novelty",
-                       title="Mean scores and their standard deviations depending on the attitude to novelty", figsize=(8, 6), bar_label=True)
+    plot_means_by_item(mean_by_item, std_by_item, lens, "mean_novelty",
+                       title="Mean scores and their 95% confidence intervals depending on the attitude to novelty",
+                       figsize=(8, 6), bar_label=True)
+
 
 def process_cross_correlations():
     calculate_cross_criteria_correlation()
     plot_mean_cross_correlation()
     plot_mean_cross_correlation(False)
 
+
 def process_all_correlations():
     transform_and_plot_correlation()
     process_cross_correlations()
+    # the latter goes to further_evaluation
     # plot_cross_corr_by_user()
     # analyze_cross_corr_outsiders()
     # plot_means_outsiders()
 
+
 def update_database(db):
     global evaluation_dir
     analyze_outputs(db)
-    analyze_scores(plot_model=True)
+    analyze_scores(plot_model=True, bar_label=True)
     process_all_correlations()
 
+
+def change_rc_params():
+    plt.rcParams["font.family"] = "serif"
+    plt.rcParams["errorbar.capsize"] = 4
+    update_database(db="./output_backup_2904")
+
+
+def test_accumulate():
+    m1 = accumulate_by_criterium(mean, by_model(mean, "uncorr_df"))
+    m2 = accumulate_by_criterium(mean, by_model(mean, "raw_uncorr_df"))
+    s1 = accumulate_by_criterium(std_of_stds, by_model(stdev, "uncorr_df"))
+    s2 = accumulate_by_criterium(std_of_stds, by_model(stdev, "raw_uncorr_df"))
+    assert m1 == m2
+    assert s1 != s2
+
 if __name__ == "__main__":
-    analyze_cross_corr_outsiders()
+    plt.rcParams["font.family"] = "serif"
+    plt.rcParams["errorbar.capsize"] = 4
+
+    update_database(db="./output_backup_2904")
+    # test_accumulate()
+    # analyze_cross_corr_outsiders()
+    # raw_uncorr_corr()
+    # plot_mean_cross_correlation(False)
+    # change_rc_params()
+    # analyze_cross_corr_outsiders()
     # update_database(db="./output_backup_2904")
     # transform_and_plot_correlation()
     # score_dataframe = retrieve_(name="score_dataframe")
