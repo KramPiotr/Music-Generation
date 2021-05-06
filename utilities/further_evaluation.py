@@ -13,8 +13,9 @@ import matplotlib.colors as colors
 import matplotlib.cm as cmx
 
 from utilities.evaluation import by_model, get_sorted_keys, retrieve_, dump_, analyze_cross_corr_outsiders, \
-    plot_means_outsiders, in_kwargs, plot_correlations, ctn
-from utilities.utils import print_to_file, save_fig
+    plot_means_outsiders, in_kwargs, ctn, save_fig
+from utilities.utils import print_to_file
+
 
 evaluation_dir = "./evaluation_results"
 
@@ -84,6 +85,9 @@ def plot_cross_corr_by_user():
     plt.figure(figsize=(7, 7.5))
     # plt.figure()
     plt.scatter(overall_novel, novel_pleasant, c=color, alpha=0.7)
+    ax = plt.gca()
+    ax.add_patch(plt.Rectangle((-1, -1), .5, .5, ls="--", lw=2, ec='black', fc='None', zorder=1000))
+    ax.add_patch(plt.Rectangle((0.5, 0.5), .5, .5, ls="--", lw=2, ec='black', fc='None', zorder=1000))
     plt.plot([-1, 1], [-1, 1], '--', alpha=0.3)
     corr_name_ = "Novelty-Overall"
     plt.xlabel(f"{corr_name_} correlation")
@@ -100,12 +104,23 @@ def plot_cross_corr_by_user():
     plt.legend(handles=patches, loc='upper center', bbox_to_anchor=(0.5, -0.1), fancybox=True, shadow=True, )
     save_fig(plt, evaluation_dir, "cross_correlation_users")
 
+# def hypo_cmap():
+#     cm = sns.diverging_palette(220, 20, n=1600, as_cmap=True)
+#     newcolors = cm(np.linspace(0, 1, 1600))
+#     newcolors[37:-37, 3] = 0.2
+#     return ListedColormap(newcolors)
+
+def hypo_ticks():
+    return [0, 0.2, 0.4, 0.6, 0.8, 0.95]
+
 def hypo_cmap():
-    cm = sns.diverging_palette(220, 20, n=200, as_cmap=True)
-    newcolors = cm(np.linspace(0, 1, 200))
-    newcolors[5:-5, 3] = 0.2
+    cm = sns.diverging_palette(220, 20, n=1000, as_cmap=True)
+    newcolors = cm(np.linspace(0, 1, 1000))
+    newcolors[:-50, 3] = 0.2
     return ListedColormap(newcolors)
 
+def hypo_set():
+    return hypo_cmap(), hypo_ticks()
 
 def plot_hypothesis(corr, name, title, rotate=True):
     newcmp = hypo_cmap()
@@ -154,28 +169,34 @@ def hyphotesis_testing():
     len_ = by_model(len)['overall']['MusicVAE']
 
     mps = []
-    for c in means:
-        test_values = {}
-        m = means[c]
-        s = stds[c]
-        for m1 in m:
-            test_values[m1] = {}
-            for m2 in m:
-                test_values[m1][m2] = stats.t.cdf((m[m2] - m[m1])/sqrt((s[m1]**2 + s[m2]**2)/len_), df=len_-1)
-        mps.append(plot_hypothesis(pd.DataFrame(test_values), f"test_{c}", f"Hypothesis testing for {ctn(c)}"))
+    with open(os.path.join(evaluation_dir, "hyphothesis_testing.txt"), 'w') as f:
+        print_ = partial(print_to_file, file=f)
+        for c in means:
+            print_(c)
+            test_values = {}
+            m = means[c]
+            s = stds[c]
+            for m1 in m:
+                print_(m1, indent_level=1)
+                test_values[m1] = {}
+                for m2 in m:
+                    test_values[m1][m2] = stats.t.cdf((m[m2] - m[m1])/sqrt((s[m1]**2 + s[m2]**2)/len_), df=len_-1)
+                    print_(f"{m2}: {test_values[m1][m2]} ({test_values[m1][m2]:.4f})", indent_level=2)
+            mps.append(plot_hypothesis(pd.DataFrame(test_values), f"test_{c}", f"{ctn(c)} Score"))
 
     plt.figure(figsize=(12, 4))
+    plt.suptitle("Null hypotheses test results for different criteria and pairs of music generators", fontsize=20)
     for i in range(len(mps)):
         plt.subplot(1, 3, i + 1)
         mps[i]()
     plt.tight_layout(2)
 
     norm = colors.Normalize(vmin=0, vmax=1)
-    cmap = hypo_cmap()
+    cmap, ticks = hypo_set()
     scalar_map = cmx.ScalarMappable(norm=norm, cmap=cmap)
     plt.subplots_adjust(bottom=0.1, right=0.9, top=0.9)
     cax = plt.axes([0.94, 0.1, 0.01, 0.8])
-    cb = plt.colorbar(scalar_map, cax=cax, ticks=[0.025, 0.2, 0.4, 0.6, 0.8, 0.975])
+    cb = plt.colorbar(scalar_map, cax=cax, ticks=ticks)
     cb.outline.set_linewidth(0)
 
     save_fig(plt, evaluation_dir, "hypothesis_tested")
@@ -191,6 +212,7 @@ def update_db_2():
     plot_cross_corr_by_user()
     analyze_cross_corr_outsiders()
     plot_means_outsiders()
+    hyphotesis_testing()
 
 
 def change_rc_params():
@@ -205,7 +227,7 @@ def test_cdf():
 if __name__ == "__main__":
     plt.rcParams["font.family"] = "serif"
     plt.rcParams["errorbar.capsize"] = 4
-    hyphotesis_testing()
+    # hyphotesis_testing()
     # change_rc_params()
-    # update_db_2()
+    update_db_2()
     # novel_averse_seeking_division()

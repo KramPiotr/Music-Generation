@@ -3,7 +3,7 @@ import os
 
 from scipy import stats
 from tqdm import tqdm
-from utilities.utils import dump, retrieve, save_fig, color_list
+from utilities.utils import dump, retrieve, color_list, print_to_file
 from statistics import mean, stdev
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
@@ -24,6 +24,13 @@ os.makedirs(pickle_dir, exist_ok=True)
 dump_ = partial(dump, dir=pickle_dir, extension=True)
 retrieve_ = partial(retrieve, store_folder=pickle_dir, extension=True)
 
+
+def save_fig(plt, store_dir, name):
+    diss_eval_dir = "..\\..\\dissertation\\figs\\evaluation"
+    os.makedirs(diss_eval_dir, exist_ok=True)
+    from utilities.utils import save_fig
+    save_fig(plt, store_dir, name)
+    plt.savefig(os.path.join(diss_eval_dir, f"{name}.pdf"))
 
 class Score():
     def rename(self, model):
@@ -146,6 +153,26 @@ def in_kwargs(kwargs, arg, default):
 def conf_95(std, n):
     return stats.t.ppf(0.975, df=n-1) * std / math.sqrt(n)
 
+def print_means_with_conf(func):
+    def wrapper(mean_by_item, std_by_item, n_items, name, **kwargs):
+        global evaluation_dir
+        items = get_sorted_keys(mean_by_item["overall"])
+        if type(n_items) is int:
+            n_items = {item: n_items for item in items}
+        with open(os.path.join(evaluation_dir, f"mean_std_conf_by_model_{name}.txt"), "w") as f:
+            print_ = partial(print_to_file, file=f)
+            for item in items:
+                print_(f"{item}:")
+                for c in mean_by_item:
+                    print_(f"{c}:", indent_level=1)
+                    print_(f"mean: {mean_by_item[c][item]:.2f} (in full: {mean_by_item[c][item]})", indent_level=2)
+                    print_(f"std: {std_by_item[c][item]:.2f} (in full: {std_by_item[c][item]})", indent_level=2)
+                    conf = conf_95(std_by_item[c][item], n_items[item])
+                    print_(f"95 conf: {conf:.2f} (in full: {conf})", indent_level=2)
+        return func(mean_by_item, std_by_item, n_items, name, **kwargs)
+    return wrapper
+
+@print_means_with_conf
 def plot_means_by_item(mean_by_item, std_by_item, n_items, name, title=None, legend=True, colours=None,
                        show=True, rotation=0, model=None, figsize=None, save=True, bar_label=False,
                        title_mp=False, **kwargs):
@@ -177,7 +204,9 @@ def plot_means_by_item(mean_by_item, std_by_item, n_items, name, title=None, leg
                                   fontsize=in_kwargs(kwargs, 'bar_label_font_size', 10))
         plt.xticks(
             ticks=[2.5 + 5 * j for j in np.arange(len(items))],
-            labels=[extract_label(n, model) for n in items],
+            labels=[extract_label(n, model) for n in items]
+                    if not in_kwargs(kwargs, 'remove_xticks_labels', False) else
+                    [f"Song #{x}" for x in np.arange(len(items))],
             rotation=rotation
         )
         if legend:
@@ -195,7 +224,7 @@ def plot_means_by_item(mean_by_item, std_by_item, n_items, name, title=None, leg
         else:
             plt.figure(figsize=figsize)
         if title is not None:
-            plt.title(title)
+            plt.title(title, fontdict=in_kwargs(kwargs, 'title_fontdict', dict(fontsize='large')))
         make_plot()
         save_fig(plt, evaluation_dir, name)
         if show:
@@ -252,7 +281,7 @@ def analyze_scores(plot_model=True, name=None, representation=None, legend=True,
 
     if plot_model:
         make_main_plot = plot_means_by_item(mean_by_model, std_by_model, n_items, name=main_name,
-                                            title=main_title, figsize=(8, 6), title_mp=title_mp, legend=legend,
+                                            title=main_title, figsize=(10, 6.5), title_mp=title_mp, legend=legend, title_fontdict=dict(fontsize='xx-large'),
                                             **kwargs)
 
     mean_by_model_song = by_model_song(mean)
@@ -262,21 +291,28 @@ def analyze_scores(plot_model=True, name=None, representation=None, legend=True,
     std_by_criteria_song = switch_key_order(std_by_model_song)
 
     models = get_sorted_keys(mean_by_model['overall'])
-    plt.figure(figsize=(12, 15))
+    fig = plt.figure(figsize=(12, 15))
+    colours = ['#F9DC5C', '#ED254E', '#C2EABD']
+    patches = [mpatches.Patch(color=colours[0], label='Pleasantness score'),
+               mpatches.Patch(color=colours[1], label='Overall score'),
+               mpatches.Patch(color=colours[2], label='Novelty score')]
+    fig.legend(handles=patches)
     plt.suptitle(transform("Mean scores and their 95% confidence intervals by song"), fontsize=20)
     for i, m in enumerate(models):
         plt.subplot(len(models), 1, i + 1)
-        plt.title(f"Model: {m}, overall mean: {mean_by_model['overall'][m]:.2f}")
+        plt.title(f"Music generation method: {m}, overall mean: {mean_by_model['overall'][m]:.2f}")
         make_plot = plot_means_by_item(mean_by_criteria_song[m], std_by_criteria_song[m],
                                        len_by_model_song['overall'][m],
                                        name=transform(f"mean_scores_for_{m}"),
                                        title=transform(
                                            f"Mean scores and their 95% confidence intervals by song for model {m}"),
-                                       legend=i == 0,
+                                       legend=False,
                                        save=False,
                                        show=False,
                                        model=m,
-                                       figsize=(12, 6))
+                                       figsize=(12, 6),
+                                       rotation = 0 if m != "MusicVAE" else 15,
+                                       remove_xticks_labels=True)
         make_plot()
     plt.tight_layout()
     save_fig(plt, evaluation_dir, transform("mean_scores_by_song"))
@@ -442,7 +478,8 @@ def multiplot_correlation(make_plots):
     scalar_map = cmx.ScalarMappable(norm=norm, cmap=cmap)
     plt.subplots_adjust(bottom=0.1, right=0.9, top=0.9)
     cax = plt.axes([0.94, 0.1, 0.02, 0.8])
-    plt.colorbar(scalar_map, cax=cax)
+    cb = plt.colorbar(scalar_map, cax=cax)
+    cb.outline.set_linewidth(0)
 
     save_fig(plt, evaluation_dir, "multiplot_correlation")
     plt.show()
