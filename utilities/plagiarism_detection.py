@@ -67,7 +67,7 @@ def test_plagiarism(song_path):
 
 def process_plagiarism(song_path, database_path, hardcode=None):
     song = converter.parse(song_path)
-    s_n, s_d = extract_notes(song, None, False)
+    s_n, s_d = extract_notes(score=song, seq_len=None, with_start=False, raw=True)
     db_n, db_d = retrieve_notes_and_durations(database_path)
     s_n_mh = multi_hot_encoding_12_tones(s_n)
     db_n_mh = multi_hot_encoding_12_tones(db_n)
@@ -136,9 +136,9 @@ def process_plagiarism_for_database(glob_database=None, results_path=None, datas
     db_n, db_d = retrieve_notes_and_durations(two_datasets_path)
     db_n_mh = multi_hot_encoding_12_tones(db_n)
     multihot_tuples_db = db_n_mh  # [tuple(c) for c in db_n_mh]
-
-    with open("iou_scores", "rb") as f:
-        iou_scores = pkl.load(f)
+    #
+    # with open("iou_scores", "rb") as f:
+    #     iou_scores = pkl.load(f)
 
     if results_path is None:
         results_path = "../evaluation_pieces/plagiarism_scores.txt"
@@ -146,7 +146,7 @@ def process_plagiarism_for_database(glob_database=None, results_path=None, datas
     with open(results_path, "w") as f:
         for song_path in tqdm(glob_database):
             song = converter.parse(song_path)
-            s_n, s_d = extract_notes(song, None, False)
+            s_n, s_d = extract_notes(score=song, seq_len=None, with_start=False, raw=True)
             s_n_mh = multi_hot_encoding_12_tones(s_n)
             multihot_tuples_song = s_n_mh  # [tuple(c) for c in s_n_mh]
             score, fragment_song, fragment_database = local_alignment(multihot_tuples_song,
@@ -182,12 +182,28 @@ def saveIoU():
     with open("iou_scores", "wb") as f:
         pkl.dump(iou_scores, f)
 
+
 def find_fragments():
     for path_ in glob("../**/song_fragment*", recursive=True):
         print(path_)
 
 
+def test_process_plagiarism():
+    # song_path = Path("..\\run\\two_datasets_attention\\compose\\00\\output-2021_01_12--06_30_44-None-1.0-1.0-weights.h5\\output_init_none.mid")
+    song_path = Path(".\\example\\output_init_None.mid")
+    database_path = Path("..\\run\\two_datasets_store\\version_3")
+    process_plagiarism(song_path, database_path)
+
+
+def test_process_plagiarism_for_database():
+    song_path = ".\\example\\plagiarism_for_db\\output_init_None.mid"
+    res_path = ".\\example\\plagiarism_for_db\\results.txt"
+    process_plagiarism_for_database(glob_database=[song_path], results_path=res_path)
+
+
 if __name__ == "__main__":
+    # test_process_plagiarism()
+    test_process_plagiarism_for_database()
     # get_evaluation_glob()
     # process_plagiarism_for_database()
-    find_fragments()
+    # find_fragments()

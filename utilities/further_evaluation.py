@@ -13,7 +13,7 @@ import matplotlib.colors as colors
 import matplotlib.cm as cmx
 
 from utilities.evaluation import by_model, get_sorted_keys, retrieve_, dump_, analyze_cross_corr_outsiders, \
-    plot_means_outsiders, in_kwargs, ctn, save_fig
+    plot_means_outsiders, in_kwargs, ctn, save_fig, update_database
 from utilities.utils import print_to_file
 
 
@@ -223,11 +223,16 @@ def change_rc_params():
 def test_cdf():
     print(stats.t.cdf(-2, df=65))
 
+def update_both():
+    update_database(db="./output_backup_2904")
+    update_db_2()
+
 
 if __name__ == "__main__":
     plt.rcParams["font.family"] = "serif"
     plt.rcParams["errorbar.capsize"] = 4
     # hyphotesis_testing()
     # change_rc_params()
-    update_db_2()
+    # update_db_2()
+    update_both()
     # novel_averse_seeking_division()

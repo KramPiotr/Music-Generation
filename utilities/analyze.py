@@ -12,6 +12,8 @@ from utilities.part_utils import preprocess
 from functools import partial
 import matplotlib.patches as mpatches
 
+plt.rcParams["font.family"] = "serif"
+
 ################################# Getters ###############################
 
 def get_notes_durations(store_dir, kwargs=None):
@@ -117,6 +119,31 @@ def plot_frequencies_by_pitch(analyze_dir, suffix="", **kwargs):
     save_fig(plt, analyze_dir, "pitch_frequency" + suffix)
     return make_plot
 
+def zipfs_plots(chords, n_per_note, analyze_dir):
+    plt.figure(figsize=(10, 10))
+    chords = sorted(n_per_note.keys(), key=lambda c: -n_per_note[c])
+    cs = [c for c in chords if len(c) > 1]
+    ys = [n_per_note[c] for c in cs]
+    plt.scatter(np.arange(1, len(cs) + 1), ys, color='blue')
+    plt.title(f"Chord frequency")
+    plt.xlabel("Log of the rank number")
+    plt.ylabel("Log of the number of occurences")
+    plt.yscale("log")
+    plt.xscale("log")
+    # for i in range(1, 5):
+    #     plt.subplot(2, 2, i)
+    #     cs = [c for c in chords if len(c)==i][::-1]
+    #     ys = [n_per_note[c] for c in cs]
+    #     plt.scatter(np.arange(1, len(cs) + 1), ys, color='blue')
+    #     plt.title(f"Chords with {i} pitches")
+    #     plt.xlabel("Log of the rank number")
+    #     plt.ylabel("Log of the number of occurences")
+    #     plt.yscale("log")
+    #     plt.xscale("log")
+    save_fig(plt, analyze_dir, "zipf_plots")
+    plt.show()
+
+
 
 def analyze_frequencies_by_group(analyze_dir, suffix="", n_max_chords=10, n_labels=None, **kwargs):
     np.random.seed(0)
@@ -131,6 +158,7 @@ def analyze_frequencies_by_group(analyze_dir, suffix="", n_max_chords=10, n_labe
             n_per_len[len(note)] = n_per_len.get(len(note), 0) + 1
 
     chords = sorted(n_per_note.keys(), key=lambda c: (len(c), n_per_note[c]))
+    zipfs_plots(chords, n_per_note, analyze_dir)
     occurence = [n_per_note[c] for c in chords]
     colors = color_list([len(c) for c in chords], 2)
 
@@ -274,7 +302,7 @@ def analyze_frequencies_by_duration(analyze_dir, suffix="", space_labels=2, **kw
     def make_plot():
         plt.bar(x, occurence, color=color_list(x, 2), width=1)
         plt.title("Duration frequency")
-        plt.xlabel("Duration")
+        plt.xlabel("Duration (in quarter notes)")
         plt.ylabel("Number of occurences")
         plt.yscale("log")
         plt.xticks(xticks, xlabels)
@@ -342,7 +370,7 @@ def change_font():
     plot_frequent_chords()
 
 if __name__ == "__main__":
-    pass
+    analyze_frequencies_by_group(f"../run/two_datasets_store/version_3/analysis")
     # change_font()
     # plot_frequent_chords()
     # analyze_dataset_by_version()

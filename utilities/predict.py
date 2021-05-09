@@ -2,6 +2,8 @@
 import pickle as pkl
 import time
 import os
+from fractions import Fraction
+
 import numpy as np
 from music21 import stream
 import sys
@@ -9,11 +11,15 @@ import collections
 import matplotlib.pyplot as plt
 from tensorflow.keras.layers import Lambda
 import tensorflow.keras.backend as K
-from utilities.utils import sample_with_temp, retrieve_distincts_and_lookups, retrieve_best_model, multihot_sample
+from matplotlib import rc
+from utilities.utils import sample_with_temp, retrieve_distincts_and_lookups, retrieve_best_model, multihot_sample, \
+    save_fig, transform_note_tex, transform_duration_tex
 from utilities.midi_utils import get_note, get_initialized_song, translate_chord
 from utilities.run_utils import id_to_str
 from utilities.notes_utils import multi_hot_encoding_12_tones
 
+rc('text', usetex=True)
+plt.rcParams["font.family"] = "serif"
 
 def predict(section, version_id, dataset_version, notes_temp, duration_temp, dataset_dir=None, weights_file=None,
             init=None, save_with_time=True, min_extra_notes=50, max_extra_notes=200, model_lambdas=None):
@@ -114,6 +120,9 @@ def predict(section, version_id, dataset_version, notes_temp, duration_temp, dat
 
         overall_preds.append(notes_prediction[0])
 
+        if att:
+            durations_prediction[0][duration_to_int[0]] = 0
+
         if note_index < min_extra_notes:
             if att:
                 notes_prediction[0][note_to_int["S"]] = 0
@@ -178,8 +187,31 @@ def predict(section, version_id, dataset_version, notes_temp, duration_temp, dat
         print("Notes\n")
         # note_predictions = np.array(note_predictions)
         # duration_predictions = np.array(duration_predictions)
+        nmc = collections.Counter(note_predictions).most_common()
+        notes = [transform_note_tex(n[0]) for n in nmc]
+        occs = [x[1] for x in nmc]
+        plt.figure(figsize=(14, 6))
+        plt.subplot(1, 2, 1)
+        bars = plt.bar(np.arange(len(notes)), occs, color=['#FF9933', '#FF6600'], tick_label= notes)
+        plt.xticks(rotation=45, fontsize=6)
+        plt.title("Chord frequency", fontsize=20)
+        plt.bar_label(bars, labels=occs, fontsize=6)
+
         for n, occ in collections.Counter(note_predictions).most_common():
             print(f"{n:<30}{occ}")
+
+        dmc = collections.Counter(duration_predictions).most_common()
+        durations = [transform_duration_tex(d[0]) for d in dmc]
+        occs = [x[1] for x in dmc]
+        plt.subplot(1, 2, 2)
+        bars = plt.bar(np.arange(len(durations)), occs, color=['#76CFD5', '#81D4FA'], tick_label= durations)
+        plt.title("Duration frequency", fontsize=20)
+        plt.bar_label(bars, labels=occs, fontsize=15)
+        plt.xticks(fontsize=15)
+
+        save_fig(plt, output_folder, "RNN_embed_nd_freq")
+        plt.show()
+
         print("\nDurations\n")
         for d, occ in collections.Counter(duration_predictions).most_common():
             print(f"{str(d):<30}{occ}")
@@ -187,58 +219,86 @@ def predict(section, version_id, dataset_version, notes_temp, duration_temp, dat
 
     # Plots
     if att:  # later you can adopt the plot to use multihot
+        treshold = 0.002
+
         overall_preds = np.transpose(np.array(overall_preds))
-        overall_preds[overall_preds < 1 / 480] = 0
+        overall_preds[overall_preds < treshold] = 0
         print(f'Generated sequence of {len(prediction_output)} notes')
 
-        plt.matshow(np.log(overall_preds))
+        plt.figure(figsize=(6, 8))
+        plt.matshow(np.log(overall_preds), fignum=0)
         # plt.matshow(np.log(overall_preds[:, 40:60]))
 
-        cb_ticks = np.linspace(overall_preds.min(), overall_preds.max(), 10)
-        cbar = plt.colorbar(ticks=np.log(cb_ticks), extend='both')
-        cbar.ax.set_yticklabels(cb_ticks)
+        #cb_ticks = np.log(np.logspace(overall_preds.min(), overall_preds.max(), 10))
+        #cb_ticks = np.log(np.linspace(overall_preds.min(), overall_preds.max(), 10))
+        cb_ticks = np.linspace(np.log(treshold), np.log(overall_preds.max()), 10)
+        cbar = plt.colorbar(ticks=cb_ticks, extend='both')
+        cbar.ax.set_yticks(cb_ticks)
+        cbar.ax.set_yticklabels([f"{np.exp(x):.4f}" for x in cb_ticks])
 
-        tick_candidates = np.sort(np.sum(overall_preds, axis=-1).argsort()[-100:])
-        ticks = [tick_candidates[0]]
-        for i in range(1, len(tick_candidates)):
-            if tick_candidates[i] - ticks[-1] <= 5:
+        tick_candidates = np.sort(np.sum(overall_preds, axis=-1).argsort()[-40:])
+        #ticks = [tick_candidates[0]]
+        ticks = [-10]
+        for i in range(0, len(tick_candidates)):
+            if max([int_to_note[tick_candidates[i]].startswith(x) for x in ["A", "C.G", "C.D"]]):
+                continue
+            if tick_candidates[i] - ticks[-1] <= 8:
                 continue
             else:
                 ticks.append(tick_candidates[i])
 
-        labels = [int_to_note[t] for t in ticks]
+        ticks = ticks[1:]
+        labels = [transform_note_tex(int_to_note[t]) for t in ticks]
         plt.yticks(ticks, labels)
-        plt.title("Predictions visualized")
-        plt.savefig(os.path.join(output_folder, "predictions.pdf"))
+        plt.title(f"Predictions visualized (visibility treshold: {treshold})")
+        save_fig(plt, output_folder, "RNN_embed_predictions")
+        plt.show()
+        #print(5)
 
-    # ## attention plot
-    # if use_attention:
-    #     fig, ax = plt.subplots(figsize=(20, 20))
-    #
-    #     im = ax.imshow(att_matrix[(seq_len - 2):, ], cmap='coolwarm', interpolation='nearest')
-    #
-    #     # Minor ticks
-    #     ax.set_xticks(np.arange(-.5, len(prediction_output) - seq_len, 1), minor=True);
-    #     ax.set_yticks(np.arange(-.5, len(prediction_output) - seq_len, 1), minor=True);
-    #
-    #     # Gridlines based on minor ticks
-    #     ax.grid(which='minor', color='black', linestyle='-', linewidth=1)
-    #
-    #     # We want to show all ticks...
-    #     ax.set_xticks(np.arange(len(prediction_output) - seq_len))
-    #     ax.set_yticks(np.arange(len(prediction_output) - seq_len + 2))
-    #     # ... and label them with the respective list entries
-    #     ax.set_xticklabels([n[0] for n in prediction_output[(seq_len):]])
-    #     ax.set_yticklabels([n[0] for n in prediction_output[(seq_len - 2):]])
-    #
-    #     # ax.grid(color='black', linestyle='-', linewidth=1)
-    #
-    #     ax.xaxis.tick_top()
-    #
-    #     plt.setp(ax.get_xticklabels(), rotation=90, ha="left", va="center",
-    #              rotation_mode="anchor")
-    #
-    #     plt.show()
+    ## attention plot
+
+        n_vis = 40
+
+        fig, ax = plt.subplots(figsize=(10, 10))
+
+        att_matrix = att_matrix[(seq_len-1):, ]
+        att_matrix = att_matrix[:n_vis, :n_vis]
+
+        note_predictions = note_predictions[:n_vis]
+        duration_predictions = duration_predictions[:n_vis]
+
+        ax.imshow(att_matrix, cmap='plasma', interpolation='nearest')
+
+        ax.set_xticks(np.arange(-.5, len(note_predictions), 1), minor=True)
+        ax.set_yticks(np.arange(-.5, len(note_predictions), 1), minor=True)
+        #[t.set_color('white') for t in ax.yaxis.get_ticklines()]
+
+        ax.grid(which='minor', color='black', linestyle='-', linewidth=1)
+        ax.tick_params(which='minor', length=0)
+
+        ax.set_xticks(np.arange(len(note_predictions)))
+        ax.set_yticks(np.arange(len(note_predictions)))
+
+        nd_predictions = [fr"{transform_note_tex(n)} - {transform_duration_tex(d)}" for n, d in zip(note_predictions, duration_predictions)]
+
+        fontdict = {
+            'fontsize': 8
+        }
+        ax.set_xticklabels(nd_predictions, fontdict=fontdict)
+        ylabels = ["START"]
+        ylabels.extend(nd_predictions)
+        ylabels = ylabels[:-1]
+        ax.set_yticklabels(ylabels, fontdict=fontdict)
+
+        # ax.grid(color='black', linestyle='-', linewidth=1)
+
+        ax.xaxis.tick_top()
+
+        plt.setp(ax.get_xticklabels(), rotation=90, ha="left", va="center",
+                 rotation_mode="anchor")
+
+        save_fig(plt, output_folder, "RNN_embed_attention")
+        plt.show()
 
 
 def predict_multihot_without_saved_model():
@@ -258,17 +318,17 @@ def predict_multihot():
                 init=None)
 
 
-def predict_attention_hpc():
-    for _ in range(10):
-        predict(section="two_datasets_attention_hpc", version_id=21,
-                dataset_version=2, notes_temp=1.5, duration_temp=1, dataset_dir="../run/two_datasets_attention/store",
+def predict_attention_hpc(n=10):
+    for _ in range(n):
+        predict(section="two_datasets_attention_hpc", version_id=21, min_extra_notes=150,
+                dataset_version=2, notes_temp=0.75, duration_temp=1, dataset_dir="../run/two_datasets_attention/store",
                 init=None)
 
 
 if __name__ == "__main__":
     # np.random.seed(0)  # comment when not debugging
-    predict_attention_hpc()
-    predict_multihot()
+    predict_attention_hpc(1)
+    #predict_multihot()
     # predict_multihot()
     # predict("two_datasets_multihot", 1, 1, 1, 1) #TODO convert into unit test
     # predict("two_datasets_attention", 3, 1, 1, 1, init="cfge") #TODO convert into unit test

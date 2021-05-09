@@ -8,10 +8,12 @@ from utilities.part_utils import single_part_preprocess, process_notes_and_durat
 from utilities.utils import save_notes_and_durations
 
 def open_midi(midi_path, remove_drums=True):
-    # There is an one-line method to read MIDIs
-    # but to remove the drums we need to manipulate some
-    # low level MIDI events.
-    # TODO check why it works
+    '''
+    Copied from https://github.com/vyshor/MusicAids/blob/master/channel.py
+    :param midi_path: path to the midi file
+    :param remove_drums: should drums be removed or not
+    :return: midi stream
+    '''
     mf = midi.MidiFile()
     mf.open(midi_path)
     mf.read()

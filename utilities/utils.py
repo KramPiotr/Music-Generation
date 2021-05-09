@@ -327,6 +327,24 @@ def draw_representatives(db, n = 10):
         new_path = os.path.join(repr_dir, ntpath.basename(repr_path))
         shutil.copyfile(repr_path, new_path)
 
+def frac(a, b):
+    return r"\frac{" + str(int(a)) + "}{" + str(int(b)) + "}"
+
+def transform_duration_tex(d):
+    if "/" in str(d):
+        fr = str(d).split("/")
+        d = frac(fr[0], fr[1])
+    elif str(d).endswith(".25") or str(d).endswith(".75"):
+        d = frac(4*d, 4)
+    elif str(d).endswith(".5"):
+        d = frac(2*d, 2)
+    else:
+        d = int(d)
+    return fr"${d}$"
+
+def transform_note_tex(n):
+     return n.replace(".", " ").replace("#", r"$\sharp$").replace("-", r"$\flat$")
+
 ##TODO Question how to sample with temperature from multihot encoding, przygotuj inne pytania na spotkanie
 
 ## Zrob jakies unit tests, np czy durations z rests sie zgadzaja

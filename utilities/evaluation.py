@@ -214,7 +214,8 @@ def plot_means_by_item(mean_by_item, std_by_item, n_items, name, title=None, leg
                        mpatches.Patch(color=colours[1], label='Overall score'),
                        mpatches.Patch(color=colours[2], label='Novelty score')]
             plt.legend(handles=patches)
-        plt.ylim([0, 5])
+        plt.ylim([0, in_kwargs(kwargs, 'new_ylim', 5)])
+        plt.grid(True, axis='y', linestyle='--')
         if title_mp and title is not None:
             plt.title(title)
 
@@ -537,9 +538,9 @@ def analyze_cross_corr_outsiders():
     dump_(name="uncorr_df", file=dataframes[0])
     dump_(name="corr_df", file=dataframes[1])
     mps = [analyze_scores(plot_model=True, name="uncorr_df", representation="novelty averse people",
-                          title_mp=True, legend=False, bar_label=True, label_type='center', bar_label_font_size=10),
+                          title_mp=True, legend=False, bar_label=True, bar_label_font_size=10, new_ylim=5.2), #label_type='center',
            analyze_scores(plot_model=True, name="corr_df", representation="novelty seeking people",
-                          title_mp=True, bar_label=True, label_type='center', bar_label_font_size=10)]
+                          title_mp=True, bar_label=True, bar_label_font_size=10, new_ylim=5.2)]
     plt.figure(figsize=(10, 8))
     plt.subplot(2, 1, 1)
     mps[1]()

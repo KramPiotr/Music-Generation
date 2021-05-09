@@ -3,10 +3,18 @@ import pandas as pd
 import os
 import matplotlib.pyplot as plt
 import numpy as np
-from utilities.utils import print_to_file, save_fig
+from utilities.utils import print_to_file
 from functools import partial
+import seaborn as sns
 
-def plot_results(results_database):
+def save_fig(plt, store_dir, name):
+    diss_eval_dir = "..\\..\\dissertation\\figs\\training"
+    os.makedirs(diss_eval_dir, exist_ok=True)
+    from utilities.utils import save_fig
+    save_fig(plt, store_dir, name)
+    plt.savefig(os.path.join(diss_eval_dir, f"{name}.pdf"))
+
+def plot_results(results_database, name, fig_name):
     scores = []
     for i, result in enumerate(glob(os.path.join(results_database, "*"))):
         test_results = os.path.join(result, "test_results.txt")
@@ -16,12 +24,17 @@ def plot_results(results_database):
             scores.append((float(f.readlines()[1].split(":")[1]), result[-2:]))
     scores.sort()
     losses = [x[0] for x in scores]
-    plt.bar(np.arange(len(losses)), losses)
-    plt.title("Distribution for the test loss in the tuned models")
-    plt.xlabel("Models")
-    plt.ylabel("Test loss")
-    plt.yticks([])
-    save_fig(plt, results_database, "test_loss")
+    plt.figure(figsize=(9, 7))
+    plt.title(f"Distribution ot test losses for different configurations of the {name} model")
+    sns.distplot(losses, rug=True)
+    plt.xlabel("Test loss")
+    save_fig(plt, results_database, f"{fig_name}_test_loss_dist")
+    plt.show()
+    # plt.bar(np.arange(len(losses)), losses)
+    # plt.xlabel("Models")
+    # plt.ylabel("Test loss")
+    # plt.yticks([])
+    # save_fig(plt, results_database, "test_loss")
 
 def analyse_results(results_database):
     with open(os.path.join(results_database, "results_analysis.txt"), "w") as f:
@@ -49,7 +62,7 @@ def analyse_hpc_results():
 
 def plot_hpc_results():
     results_database = "..\\run\\two_datasets_attention_hpc\\"
-    plot_results(results_database)
+    plot_results(results_database, "RNN with embeddings", "RNN_embed")
 
 def analyse_attention_models():
     results_database = "..\\run\\two_datasets_attention"
