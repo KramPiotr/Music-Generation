@@ -23,10 +23,10 @@ def open_midi(midi_path, remove_drums=True):
             mf.tracks[i].events = [ev for ev in mf.tracks[i].events if ev.channel != 10]
     return midi.translate.midiFileToStream(mf)
 
-def extract_notes(score, seq_len=None, with_start=True, raw=False, log=False):
+def extract_notes(score, seq_len=None, with_start=True, raw=False, log=False, flat=False):
     parts = instrument.partitionByInstrument(score)
 
-    if parts:
+    if parts and not flat:
         parts_to_parse = [part.recurse() for part in parts.parts]
         if log:
             print(f"Found {len(parts_to_parse)} parts")
@@ -200,9 +200,9 @@ def save_song_from_notes_and_durations(notes, durations, type="list", path="song
     if type == "str":
         translate_function = lambda x, y: get_note(x, y, True)
     elif type == "multihot":
-        translate_function = lambda x, y: get_note(x, y, False)
+        translate_function = lambda x, y: get_note(x, y, False, treshold=0.5)
     elif type == "list":
-        translate_function = lambda x, y: get_note(x, y, False, None)
+        translate_function = lambda x, y: get_note(x, y, False)
     else:
         raise Exception("Invalid type")
 

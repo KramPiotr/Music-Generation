@@ -146,8 +146,12 @@ def record_firing(model_dir, network_io_dir, io_fragment=None, suffix="", test=F
         plt.title(f"Probability density function for note {i}")
         plt.savefig(os.path.join(dist_dir, f"Note_{i}_PDF"))
 
+
 def test_firing():
-    record_firing("../run/two_datasets_multihot/09/", "../run/two_datasets_store/version_3/test")
+    record_firing("../run/two_datasets_multihot/08/", "../run/two_datasets_store/version_3/test")
+    record_firing("../run/two_datasets_multihot/08/", "../run/two_datasets_store/version_3/train", suffix="train")
+    # record_firing("../run/two_datasets_multihot/09/", "../run/two_datasets_store/version_3/test")
+
 
 if __name__ == "__main__":
     # cmap = plt.get_cmap('tab20')

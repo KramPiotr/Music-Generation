@@ -2,7 +2,7 @@
 import numpy as np
 from utilities.notes_utils import multi_hot_encoding_12_tones, notes_to_int_tuples
 from music21 import converter
-from utilities.midi_utils import extract_notes, save_song_from_notes_and_durations, translate_chord_string
+from utilities.midi_utils import extract_notes, save_song_from_notes_and_durations, translate_chord_string, open_midi
 from utilities.utils import retrieve_notes_and_durations
 from tqdm import tqdm
 from pathlib import Path
@@ -66,8 +66,8 @@ def test_plagiarism(song_path):
 
 
 def process_plagiarism(song_path, database_path, hardcode=None):
-    song = converter.parse(song_path)
-    s_n, s_d = extract_notes(score=song, seq_len=None, with_start=False, raw=True)
+    song = open_midi(song_path)#converter.parse(song_path)
+    s_n, s_d = extract_notes(score=song, seq_len=None, with_start=False, raw=True) #you can always use analysis.txt if this doesnt work
     db_n, db_d = retrieve_notes_and_durations(database_path)
     s_n_mh = multi_hot_encoding_12_tones(s_n)
     db_n_mh = multi_hot_encoding_12_tones(db_n)
@@ -105,7 +105,7 @@ def remove_error_output():
         os.remove(file)
 
 
-def get_evaluation_glob():
+def get_evaluation_glob(): #deal only with attention, multihot and mm
     evaluation_mp3s = glob("../evaluation_pieces/**/*.mp3", recursive=True)
     evaluation_midis = []
     for path_ in evaluation_mp3s:
@@ -113,12 +113,16 @@ def get_evaluation_glob():
         if "Random" in path_:
             song = f"random_generator\\{song}"
         if "Attention" in path_ or "Multihot" in path_:
-            song = song + "*/*.mid*"
+            song = song + "*/output*.mid*"
         else:
             song += ".mid*"
         midi_path = glob(f"../**/{song}", recursive=True)
         assert (len(midi_path) == 1)
         midi_path = midi_path[0]
+        s_n, s_d = extract_notes(score=converter.parse(midi_path), seq_len=None, with_start=False)
+        if len(s_n)==0:
+            print(midi_path)
+        #print(f"length {len(s_n)}")
         evaluation_midis.append(midi_path)
     return evaluation_midis
 
@@ -147,6 +151,7 @@ def process_plagiarism_for_database(glob_database=None, results_path=None, datas
         for song_path in tqdm(glob_database):
             song = converter.parse(song_path)
             s_n, s_d = extract_notes(score=song, seq_len=None, with_start=False, raw=True)
+            s_n, s_d = s_n[:3], s_d[:3] #TODO remove
             s_n_mh = multi_hot_encoding_12_tones(s_n)
             multihot_tuples_song = s_n_mh  # [tuple(c) for c in s_n_mh]
             score, fragment_song, fragment_database = local_alignment(multihot_tuples_song,
@@ -203,7 +208,8 @@ def test_process_plagiarism_for_database():
 
 if __name__ == "__main__":
     # test_process_plagiarism()
-    test_process_plagiarism_for_database()
-    # get_evaluation_glob()
+    # test_process_plagiarism_for_database()
+    songs = get_evaluation_glob()
+    print(songs)
     # process_plagiarism_for_database()
     # find_fragments()

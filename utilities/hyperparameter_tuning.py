@@ -63,7 +63,7 @@ model_param_space = {
     "optimizer": [RMSprop]
 }
 
-
+#
 # model_param_space = {
 #     "embed_size":  [2, 3, 5, 10, 30],
 #     "rnn_units": [32, 64, 128, 256, 512],

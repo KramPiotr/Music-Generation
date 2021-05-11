@@ -99,5 +99,5 @@ def generate_attention_hpc():
 
 if __name__ == "__main__":
     # np.random.seed(0)
-    generate_multihot()
-    # generate_attention_hpc()
+    # generate_multihot()
+    generate_attention_hpc()

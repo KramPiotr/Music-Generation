@@ -97,12 +97,12 @@ def find_interpolated(val, arr, out_arr):
 #     return (preds >= random_tresholds).astype(int)
 
 def multihot_sample(preds, temperature, firing_loc):  # later implement different variants
-    firing_tresholds = np.array(retrieve(firing_loc, "firing_tresholds"))
+    firing_thresholds = np.array(retrieve(firing_loc, "firing_tresholds"))
     firing_fractions = np.array(retrieve(firing_loc, "firing_fractions"))
     fraction = np.random.uniform(0, 1, len(preds)) >= firing_fractions
-    is_on = preds >= firing_tresholds
+    is_on = preds >= firing_thresholds
     add_random = ~is_on ^ fraction  # in other words nxor: (is_on and fraction) or (not is_on and not fraction)
-    random_tresholds = firing_tresholds + add_random * np.random.normal(0, temperature * firing_tresholds, len(preds))
+    random_tresholds = firing_thresholds + add_random * np.random.normal(0, temperature * firing_thresholds, len(preds))
     return (preds >= random_tresholds).astype(int)
 
 
@@ -283,6 +283,8 @@ def visualize_model(model_dir, name=None, **params):
                ("_with_shapes" if params.get("show_shapes", False) else "") + \
                ("_with_dtype" if params.get("show_dtype", False) else "")
     plot_model(m, os.path.join(model_dir, f"{name}.png"), **params)
+    plot_model(m, os.path.join(model_dir, f"{name}_no_layer_names.png"), **params, show_layer_names=False)
+    plot_model(m, os.path.join(model_dir, f"{name}_horizontal.png"), **params, rankdir="LR")
 
 
 def save_fig(plt, store_dir, name):
@@ -353,8 +355,13 @@ def transform_note_tex(n):
 def draw_evaluation_model_representatives(model = "random_generator"):
     draw_representatives(f"../evaluation_models/compose/{model}/mp3")
 
+def visualize_evaluated_models():
+    visualize_model("../run/two_datasets_attention_hpc/21")
+    visualize_model("../run/two_datasets_multihot/08")
+
 if __name__ == "__main__":
-    draw_evaluation_model_representatives()
+    visualize_evaluated_models()
+    # draw_evaluation_model_representatives()
     # for filename in glob("../run/two_datasets_multihot/00/weights/weights-improvement*"):
     #     print(filename)
     # describe_dataset("../run/two_datasets_attention/store/version_0")

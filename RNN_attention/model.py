@@ -1,6 +1,4 @@
-# Author: Piotr Kram
-import numpy as np
-from tensorflow.keras.layers import LSTM, Input, Dropout, Dense, Activation, Embedding, Concatenate, Reshape, BatchNormalization
+from tensorflow.keras.layers import LSTM, Input, Dropout, Dense, Activation, Embedding, Concatenate, Reshape
 from tensorflow.keras.layers import Flatten, RepeatVector, Permute, TimeDistributed
 from tensorflow.keras.layers import Multiply, Lambda, Softmax
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
@@ -9,8 +7,9 @@ import tensorflow.keras.backend as K
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import RMSprop
 
-def create_network(n_notes, n_durations, embed_size=100, rnn_units=256, dense_units=256, n_lstm = 1, n_dense = 1,
-                   drop1 = 0.2, drop2 = 0.2, use_attention=True, learning_rate = 0.001, optimizer = RMSprop):
+
+def create_network(n_notes, n_durations, embed_size=100, rnn_units=256, dense_units=256, n_lstm=1, n_dense=1,
+                   drop1=0.2, drop2=0.2, use_attention=True, learning_rate=0.001, optimizer=RMSprop):
     """ create the structure of the neural network """
 
     notes_in = Input(shape=(None,))
@@ -43,13 +42,12 @@ def create_network(n_notes, n_durations, embed_size=100, rnn_units=256, dense_un
 
     else:
         z = LSTM(rnn_units)(x)
-        # c = Dropout(0.2)(c)
 
     for _ in range(n_dense):
         z = Dense(dense_units)(z)
 
     if drop2 > 0:
-        z = Dropout(drop2) (z)
+        z = Dropout(drop2)(z)
 
     notes_out = Dense(n_notes, activation='softmax', name='pitch')(z)
     durations_out = Dense(n_durations, activation='softmax', name='duration')(z)
@@ -60,6 +58,7 @@ def create_network(n_notes, n_durations, embed_size=100, rnn_units=256, dense_un
     else:
         att_model = None
 
-    model.compile(loss=['categorical_crossentropy', 'categorical_crossentropy'], optimizer=optimizer(learning_rate = learning_rate))
+    model.compile(loss=['categorical_crossentropy', 'categorical_crossentropy'],
+                  optimizer=optimizer(learning_rate=learning_rate))
 
     return model, att_model

@@ -119,13 +119,23 @@ def plot_frequencies_by_pitch(analyze_dir, suffix="", **kwargs):
     save_fig(plt, analyze_dir, "pitch_frequency" + suffix)
     return make_plot
 
+def rmse(predictions, targets):
+    return np.sqrt(((predictions - targets) ** 2).mean())
+
 def zipfs_plots(chords, n_per_note, analyze_dir):
-    plt.figure(figsize=(10, 10))
+    plt.figure(figsize=(5, 5))
     chords = sorted(n_per_note.keys(), key=lambda c: -n_per_note[c])
-    cs = [c for c in chords if len(c) > 1]
+    cs = [c for c in chords if len(c) > 0]
+    #cs = chords
     ys = [n_per_note[c] for c in cs]
-    plt.scatter(np.arange(1, len(cs) + 1), ys, color='blue')
-    plt.title(f"Chord frequency")
+    xs = np.arange(1, len(cs) + 1)
+    lx = np.log10(xs)
+    ly = np.log10(ys)
+    m, b = np.polyfit(lx, ly, 1)
+    rmse_ = rmse(m*lx + b, ly)
+    plt.plot(10**lx, 10**(m*lx+b))
+    plt.scatter(xs, ys, color='blue')
+    plt.title(f"Zipf's law for chords, RMSE: {rmse_:.4f}")
     plt.xlabel("Log of the rank number")
     plt.ylabel("Log of the number of occurences")
     plt.yscale("log")
